@@ -17,6 +17,8 @@ describe("ICO Contract", function () {
     const vestingPeriod = 60 * 60 * 24 * 180; // 180 days
 
     beforeEach(async function () {
+        // Reset the hardhat network
+        await ethers.provider.send("hardhat_reset", []);
 
         // Deploy contracts
         ICO = await ethers.getContractFactory("ICO");
@@ -40,9 +42,12 @@ describe("ICO Contract", function () {
         await ico.waitForDeployment();
         // Get signers
         [owner, addr1, addr2] = await ethers.getSigners();
+
+        // Transfer tokens to the ICO contract
+        await bearRumble.transfer(ico.target, saleOneSupply + saleTwoSupply);
     });
 
-    describe.only("Deployment", function () {
+    describe("Deployment", function () {
         it("Should set the correct parameters", async function () {
             expect(await ico.token).to.equal(bearRumble.address);
             expect(await ico.saleOnePrice()).to.equal(saleOnePrice);
@@ -55,27 +60,7 @@ describe("ICO Contract", function () {
             expect(await ico.saleTwoEndTime()).to.equal(saleTwoEnd);
             expect(await ico.cliffPeriod()).to.equal(cliffPeriod);
             expect(await ico.vestingPeriod()).to.equal(vestingPeriod);
-        });
-
-        // Add more tests for deployment checks
-    });
-
-    describe("Sale stages", function () {
-        it("Should set the correct sale stage", async function () {
-            // Test sale stages by manipulating the block timestamp
-            await expect(ico.saleStage()).to.eventually.equal(ico.SaleStage.BeforeStart);
-
-            // Set the timestamp to be within SaleOne
-            await ethers.provider.send("evm_setNextBlockTimestamp", [/* Set a timestamp within SaleOne */]);
-            await expect(ico.saleStage()).to.eventually.equal(ico.SaleStage.SaleOne);
-
-            // Set the timestamp to be within SaleTwo
-            await ethers.provider.send("evm_setNextBlockTimestamp", [/* Set a timestamp within SaleTwo */]);
-            await expect(ico.saleStage()).to.eventually.equal(ico.SaleStage.SaleTwo);
-
-            // Set the timestamp to be after the sales have ended
-            await ethers.provider.send("evm_setNextBlockTimestamp", [/* Set a timestamp after the sales have ended */]);
-            await expect(ico.saleStage()).to.eventually.equal(ico.SaleStage.Ended);
+            expect(await ico.whitelist(owner.address)).to.be.true;
         });
     });
 
@@ -87,65 +72,106 @@ describe("ICO Contract", function () {
             // Check if addr1 is whitelisted
             expect(await ico.whitelist(addr1.address)).to.be.true;
         });
+
+        it("Should add multiple addresses to the whitelist", async function () {
+            // Add addr1 and addr2 to the whitelist
+            await ico.addToWhitelist([addr1.address, addr2.address]);
+
+            // Check if addr1 and addr2 are whitelisted
+            expect(await ico.whitelist(addr1.address)).to.be.true;
+            expect(await ico.whitelist(addr2.address)).to.be.true;
+        });
     });
 
     describe("Buying tokens", function () {
         it("Should buy tokens during SaleOne", async function () {
             // Set the timestamp to be within SaleOne
-            await ethers.provider.send("evm_setNextBlockTimestamp", [/* Set a timestamp within SaleOne */]);
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart]);
 
             // Add addr1 to the whitelist
             await ico.addToWhitelist([addr1.address]);
 
+            const ownerBalanceBefore = await ethers.provider.getBalance(owner.address);
+
             // Buy tokens with addr1
-            const tokenAmount = ethers.utils.parseEther("1");
-            const tx = await ico.connect(addr1).buyTokens(tokenAmount, { value: ethers.utils.parseEther("1") });
-            await tx.wait();
+            const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
+            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) });
 
             // Check if the tokens were bought correctly
             expect(await ico.boughtTokens(addr1.address)).to.equal(tokenAmount);
+
+            // Check if the owner balance is correct
+            expect(await ethers.provider.getBalance(owner.address)).to.equal(ownerBalanceBefore + tokenAmount / BigInt(saleOnePrice));
+
+            // Check if the event was emitted correctly
+            expect(await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) }))
+                .to.emit(ico, "TokenPurchased")
+                .withArgs(addr1.address, tokenAmount, tokenAmount / BigInt(saleOnePrice));
+        });
+
+        it("Should buy tokens during SaleTwo", async function () {
+            // Set the timestamp to be within SaleTwo
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart]);
+
+            // Add addr1 to the whitelist
+            await ico.addToWhitelist([addr1.address]);
+
+            const ownerBalanceBefore = await ethers.provider.getBalance(owner.address);
+
+            // Buy tokens with addr1
+            const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
+            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) });
+
+            // Check if the tokens were bought correctly
+            expect(await ico.boughtTokens(addr1.address)).to.equal(tokenAmount);
+
+            // Check if the owner balance is correct
+            expect(await ethers.provider.getBalance(owner.address)).to.equal(ownerBalanceBefore + tokenAmount / BigInt(saleTwoPrice));
+
+            // Check if the event was emitted correctly
+            expect(await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) }))
+                .to.emit(ico, "TokenPurchased")
+                .withArgs(addr1.address, tokenAmount, tokenAmount / BigInt(saleTwoPrice));
         });
     });
 
     describe("Claiming tokens", function () {
         it("Should claim tokens after the sale has ended", async function () {
             // Set the timestamp to be within SaleOne
-            await ethers.provider.send("evm_setNextBlockTimestamp", [/* Set a timestamp within SaleOne */]);
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart + 60 * 60 * 24 * 1]);
 
             // Add addr1 to the whitelist
             await ico.addToWhitelist([addr1.address]);
 
             // Buy tokens with addr1
-            const tokenAmount = ethers.utils.parseEther("1");
-            const tx = await ico.connect(addr1).buyTokens(tokenAmount, { value: ethers.utils.parseEther("1") });
-            await tx.wait();
+            const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
+            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) });
 
             // Set the timestamp to be after the cliff period and within the vesting period
-            await ethers.provider.send("evm_setNextBlockTimestamp", [/* Set a timestamp after the cliff period and within the vesting period */]);
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + cliffPeriod + vestingPeriod / 2]);
 
             // Claim tokens with addr1
             const initialBalance = await bearRumble.balanceOf(addr1.address);
             await ico.connect(addr1).claimTokens();
             const finalBalance = await bearRumble.balanceOf(addr1.address);
+            const claimedTokens = await ico.claimedTokens(addr1.address);
 
             // Check if the tokens were claimed correctly
-            expect(finalBalance).to.be.gt(initialBalance);
+            expect(finalBalance).to.equal(initialBalance + tokenAmount / 2n);
+            expect(claimedTokens).to.equal(tokenAmount / 2n);
         });
     });
 
     describe("Burning unsold tokens", function () {
         it("Should burn unsold tokens after the sale has ended", async function () {
             // Set the timestamp to be after the sales have ended
-            await ethers.provider.send("evm_setNextBlockTimestamp", [/* Set a timestamp after the sales have ended */]);
-
-            // Get the initial balance of unsold tokens
-            const initialUnsoldTokens = await bearRumble.balanceOf(ico.address);
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + 60 * 60 * 24 * 1]);
 
             // Burn unsold tokens
             await ico.burnUnsoldTokens();
 
             // Check if the unsold tokens were burned correctly
-            expect(await bearRumble.balanceOf(ico.address)).to.be.lt(initialUnsoldTokens);
+            expect(await bearRumble.balanceOf(ico.target)).to.equal(0n);
         });
     });
 });
