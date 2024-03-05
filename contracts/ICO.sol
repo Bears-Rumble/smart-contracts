@@ -85,6 +85,8 @@ contract ICO is Ownable, ReentrancyGuard {
 
         saleOneSoldTokens = 0;
         saleTwoSoldTokens = 0;
+
+        whitelist[msg.sender] = true;
     }
 
     /************************************ External functions ************************************/
@@ -109,7 +111,7 @@ contract ICO is Ownable, ReentrancyGuard {
         }
 
         // Check if the buyer has sent enough Ether to purchase the tokens
-        require(msg.value >= price * _amount, "Insufficient Ether");
+        require(msg.value == _amount / price, "Wrong amount of Ether sent");
 
         //Send ETH to the owner
         payable(owner()).transfer(msg.value);
@@ -137,6 +139,7 @@ contract ICO is Ownable, ReentrancyGuard {
     }
 
     function claimTokens() external onlyWhiteListed nonReentrant {
+        setSaleStage();
         require(saleStage == SaleStage.Ended, "Sale not ended");
 
         uint256 currentTime = block.timestamp;
@@ -147,9 +150,10 @@ contract ICO is Ownable, ReentrancyGuard {
         );
         uint256 claimableTokens = 0;
         uint256 unlockedTokens = 0;
-        if (currentTime < saleTwoEndTime + vestingPeriod) {
+        if (currentTime < saleTwoEndTime + cliffPeriod + vestingPeriod) {
             unlockedTokens =
-                (boughtTokens[msg.sender] * (currentTime - saleTwoEndTime)) /
+                (boughtTokens[msg.sender] *
+                    (currentTime - saleTwoEndTime - cliffPeriod)) /
                 vestingPeriod;
         } else {
             unlockedTokens = boughtTokens[msg.sender];
@@ -158,6 +162,8 @@ contract ICO is Ownable, ReentrancyGuard {
         if (unlockedTokens > claimedTokens[msg.sender]) {
             claimableTokens = unlockedTokens - claimedTokens[msg.sender];
         }
+
+        claimedTokens[msg.sender] = unlockedTokens;
 
         require(claimableTokens > 0, "No claimable tokens");
 
