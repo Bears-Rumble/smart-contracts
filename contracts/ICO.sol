@@ -14,6 +14,8 @@ contract ICO is Ownable, ReentrancyGuard {
         BeforeStart,
         SaleOne,
         SaleTwo,
+        CliffPeriod,
+        VestingPeriod,
         Ended
     }
     SaleStage public saleStage;
@@ -120,13 +122,13 @@ contract ICO is Ownable, ReentrancyGuard {
         if (saleStage == SaleStage.SaleOne) {
             require(
                 saleOneSoldTokens + _amount <= saleOneTokenSupply,
-                "Insufficient remaining tokens"
+                "Insufficient remaining tokens supply"
             );
             saleOneSoldTokens += _amount;
         } else if (saleStage == SaleStage.SaleTwo) {
             require(
                 saleTwoSoldTokens + _amount <= saleTwoTokenSupply,
-                "Insufficient remaining tokens"
+                "Insufficient remaining tokens supply"
             );
             saleTwoSoldTokens += _amount;
         }
@@ -140,32 +142,33 @@ contract ICO is Ownable, ReentrancyGuard {
 
     function claimTokens() external onlyWhiteListed nonReentrant {
         setSaleStage();
-        require(saleStage == SaleStage.Ended, "Sale not ended");
+        require(
+            saleStage == SaleStage.VestingPeriod ||
+                saleStage == SaleStage.Ended,
+            "Claim period not started"
+        );
 
         uint256 currentTime = block.timestamp;
 
-        require(
-            currentTime > saleTwoEndTime + cliffPeriod,
-            "Claim period not started"
-        );
         uint256 claimableTokens = 0;
         uint256 unlockedTokens = 0;
-        if (currentTime < saleTwoEndTime + cliffPeriod + vestingPeriod) {
+
+        if (saleStage == SaleStage.VestingPeriod) {
             unlockedTokens =
                 (boughtTokens[msg.sender] *
                     (currentTime - saleTwoEndTime - cliffPeriod)) /
                 vestingPeriod;
-        } else {
+        } else if (saleStage == SaleStage.Ended) {
             unlockedTokens = boughtTokens[msg.sender];
         }
 
         if (unlockedTokens > claimedTokens[msg.sender]) {
             claimableTokens = unlockedTokens - claimedTokens[msg.sender];
+        } else {
+            revert("No claimable tokens");
         }
 
         claimedTokens[msg.sender] = unlockedTokens;
-
-        require(claimableTokens > 0, "No claimable tokens");
 
         token.transfer(msg.sender, claimableTokens);
 
@@ -177,15 +180,32 @@ contract ICO is Ownable, ReentrancyGuard {
     function burnUnsoldTokens() external onlyOwner {
         setSaleStage();
 
-        require(saleStage == SaleStage.Ended, "Sale not ended");
+        require(
+            saleStage == SaleStage.CliffPeriod ||
+                saleStage == SaleStage.VestingPeriod ||
+                saleStage == SaleStage.Ended,
+            "Sale not ended"
+        );
 
-        uint256 unsoldTokens = token.balanceOf(address(this));
+        uint256 unsoldTokensSaleOne = saleOneTokenSupply - saleOneSoldTokens;
+        uint256 unsoldTokensSaleTwo = saleTwoTokenSupply - saleTwoSoldTokens;
+        uint256 unsoldTokens = unsoldTokensSaleOne + unsoldTokensSaleTwo;
+        
         token.burn(unsoldTokens);
+
+        emit TokenBurned(unsoldTokens);
     }
 
-    function addToWhitelist(address[] calldata _addresses) external onlyOwner {
+    function manageWhitelist(
+        address[] calldata _addresses,
+        bool[] calldata _isWhitelisted
+    ) external onlyOwner {
+        require(
+            _addresses.length == _isWhitelisted.length,
+            "Arrays length mismatch"
+        );
         for (uint256 i = 0; i < _addresses.length; i++) {
-            whitelist[_addresses[i]] = true;
+            whitelist[_addresses[i]] = _isWhitelisted[i];
         }
     }
 
@@ -194,16 +214,29 @@ contract ICO is Ownable, ReentrancyGuard {
     function setSaleStage() internal {
         uint256 currentTime = block.timestamp;
 
-        if (currentTime < saleOneStartTime) {
+        if (
+            currentTime < saleOneStartTime ||
+            (currentTime > saleOneEndTime && currentTime < saleTwoStartTime)
+        ) {
             saleStage = SaleStage.BeforeStart;
         } else if (
             currentTime >= saleOneStartTime && currentTime <= saleOneEndTime
         ) {
             saleStage = SaleStage.SaleOne;
         } else if (
-            currentTime >= saleTwoStartTime && currentTime <= saleTwoEndTime
+            currentTime >= saleTwoStartTime && currentTime < saleTwoEndTime
         ) {
             saleStage = SaleStage.SaleTwo;
+        } else if (
+            currentTime >= saleTwoEndTime &&
+            currentTime < saleTwoEndTime + cliffPeriod
+        ) {
+            saleStage = SaleStage.CliffPeriod;
+        } else if (
+            currentTime >= saleTwoEndTime + cliffPeriod &&
+            currentTime < saleTwoEndTime + cliffPeriod + vestingPeriod
+        ) {
+            saleStage = SaleStage.VestingPeriod;
         } else {
             saleStage = SaleStage.Ended;
         }
