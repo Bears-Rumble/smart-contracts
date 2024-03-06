@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
-describe.only("BearRumbleToken", function() {
+describe("BearRumbleToken", function() {
 
     let BearRumbleToken, bearRumbleToken, owner, addr1, addr2;
 
