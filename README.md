@@ -1,13 +1,37 @@
-# Sample Hardhat Project
+# Bear Rumble 
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+This repository contains the BearRumble Token and BearRumble ICO Smart Contracts.
 
-Try running some of the following tasks:
+## Installation
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.js
-```
+To install and use the Bear Rumble project, follow these steps:
+
+1. Clone the repository
+
+2. Navigate to the project directory
+
+3. Install the dependencies using npm:
+
+    ```bash
+    npm install
+    ```
+
+4. Set up the development environment by creating a `.env` file and specifying the required environment variables. You can use the `.env.example` file as a template.
+
+5. Compile the smart contracts:
+
+    ```bash
+    npx hardhat compile
+    ```
+
+6. Run the tests:
+
+    ```bash
+    npx hardhat test
+    ```
+
+7. Deploy the smart contracts to a local development network:
+
+    ```bash
+    npx hardhat run scripts/deploy.js --network localhost
+    ```
