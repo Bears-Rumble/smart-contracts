@@ -13,7 +13,7 @@ To install and use the Bear Rumble project, follow these steps:
 3. Install the dependencies using npm:
 
     ```bash
-    npm install
+    npm ci
     ```
 
 4. Set up the development environment by creating a `.env` file and specifying the required environment variables. You can use the `.env.example` file as a template.
