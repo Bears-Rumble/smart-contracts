@@ -14,8 +14,16 @@ async function main() {
   const cliffPeriod = 60 * 60 * 24 * 30; // 30 days
   const vestingPeriod = 60 * 60 * 24 * 180; // 180 days
 
+  const saleOne = [saleOnePrice, saleOneSupply, 0, saleOneMinPurchase, saleOneStart, saleOneEnd];
+  const saleTwo = [saleTwoPrice, saleTwoSupply, 0, saleTwoMinPurchase, saleTwoStart, saleTwoEnd];
+
   // Deploy contracts
-  const [deployer] = await hre.ethers.getSigners();
+  let deployer;
+  if (hre.network.name === "hardhat") {
+    console.log("Deploying contracts to local network");
+    deployer = (await hre.ethers.getSigners())[0];
+  }
+  [deployer] = await hre.ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
@@ -30,14 +38,8 @@ async function main() {
   const BearRumbleICO = await hre.ethers.getContractFactory("ICO");
   const bearRumbleICO = await BearRumbleICO.deploy(
     bearRumbleToken.target,
-    saleOnePrice,
-    saleTwoPrice,
-    saleOneSupply,
-    saleTwoSupply,
-    saleOneStart,
-    saleOneEnd,
-    saleTwoStart,
-    saleTwoEnd,
+    saleOne,
+    saleTwo,
     cliffPeriod,
     vestingPeriod
   );
