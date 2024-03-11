@@ -171,6 +171,12 @@ contract ICO is Ownable, ReentrancyGuard {
         emit TokenPurchased(msg.sender, _amount, price);
     }
 
+    /**
+     * @dev Allows a whitelisted user to claim their tokens during the vesting period or after the ICO has ended.
+     * @notice This function can only be called by whitelisted users.
+     * @notice The claimable tokens are calculated based on the user's bought tokens, vesting period, and cliff period.
+     * @notice The claimed tokens are updated for the user and the claimable tokens are transferred to the user's address.
+     */
     function claimTokens() external onlyWhiteListed nonReentrant {
         setSaleStage();
         require(
@@ -208,26 +214,44 @@ contract ICO is Ownable, ReentrancyGuard {
 
     /************************************ Owner functions ************************************/
 
+    /**
+     * @dev Burns unsold tokens after the ICO ends.
+     * Only the contract owner can call this function.
+     * The function checks if the sale stage is either CliffPeriod, VestingPeriod, or Ended.
+     * If there are unsold tokens, they are burned by calling the `burn` function of the token contract.
+     * Emits a `TokenBurned` event with the number of tokens burned.
+     */
     function burnUnsoldTokens() public onlyOwner {
+        // Set the sale stage
         setSaleStage();
 
+        // Check if the sale stage is either CliffPeriod, VestingPeriod, or Ended
         require(
             saleStage == SaleStages.CliffPeriod ||
-                saleStage == SaleStages.VestingPeriod ||
-                saleStage == SaleStages.Ended,
+            saleStage == SaleStages.VestingPeriod ||
+            saleStage == SaleStages.Ended,
             "Sale not ended"
         );
 
+        // Calculate the number of unsold tokens
         uint256 unsoldTokensSaleOne = saleOne.tokenSupply - saleOne.soldTokens;
         uint256 unsoldTokensSaleTwo = saleTwo.tokenSupply - saleTwo.soldTokens;
         uint256 unsoldTokens = unsoldTokensSaleOne + unsoldTokensSaleTwo;
 
+        // Burn the unsold tokens if there are any
         if (unsoldTokens != 0) {
             token.burn(unsoldTokens);
             emit TokenBurned(unsoldTokens);
         }
     }
 
+    /**
+     * @dev Manages the whitelist status of multiple addresses.
+     * @param _addresses An array of addresses to manage the whitelist status for.
+     * @param _isWhitelisted An array of boolean values indicating whether each address should be whitelisted or not.
+     * @notice Only the contract owner can call this function.
+     * @notice The length of `_addresses` and `_isWhitelisted` arrays must be the same.
+     */
     function manageWhitelist(
         address[] calldata _addresses,
         bool[] calldata _isWhitelisted
@@ -241,6 +265,13 @@ contract ICO is Ownable, ReentrancyGuard {
         }
     }
 
+    /**
+     * @dev Ends the sale and performs necessary actions based on the current sale stage.
+     * Only the contract owner can call this function.
+     * If the sale stage is between Sale One and Sale Two, the unsold tokens from Sale One are moved to Sale Two,
+     * and the sale benefits are sent to the owner.
+     * If the sale stage is Sale Two, the unsold tokens are burned, and the sale benefits are sent to the owner.
+     */
     function endSale() external onlyOwner {
         setSaleStage();
         require(
@@ -269,6 +300,17 @@ contract ICO is Ownable, ReentrancyGuard {
 
     /************************************ Internal functions ************************************/
 
+    /**
+     * @dev Sets the sale stage based on the current time.
+     * The sale stage determines the current phase of the ICO.
+     * - BeforeStart: Before the start time of the first sale.
+     * - SaleOne: During the first sale period.
+     * - BetweenSaleOneAndTwo: After the first sale and before the start of the second sale.
+     * - SaleTwo: During the second sale period.
+     * - CliffPeriod: After the second sale and within the cliff period.
+     * - VestingPeriod: After the cliff period and within the vesting period.
+     * - Ended: After the vesting period or if the current time is not within any of the defined stages.
+     */
     function setSaleStage() internal {
         uint256 currentTime = block.timestamp;
 
