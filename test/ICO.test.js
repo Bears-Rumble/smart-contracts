@@ -96,10 +96,20 @@ describe("ICO Contract", function () {
         await ico.connect(addr2).claimTokens();
         await ico.connect(addr3).claimTokens();
         await ico.connect(addr4).claimTokens();
-    
+
         return paidEthers2 * 4n;
     }
 
+    /**
+     * Hook to simulate a complete SaleOne
+     * It should:
+     * - Set the timestamp to be within SaleOne
+     * - Add addr1 to addr4 to the whitelist
+     * - Buy tokens with addr1 to addr4
+     * - Return the total amount of ethers paid
+     * @returns {BigInt} The total amount of ethers paid
+     * 
+     */
     async function simulateSaleOne() {
         // Set the timestamp to be within SaleOne
         await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart]);
@@ -588,7 +598,7 @@ describe("ICO Contract", function () {
 
             expect(saleOneAfter[1]).to.equal(saleOneBefore[2]); // Supply set to sold tokens
             expect(saleTwoAfter[1]).to.equal(saleTwoBefore[1] + saleOneUnsoldTokens); // Supply set to remaining tokens
-            expect((await ethers.provider.getBalance(owner.address)) / 10n**18n).to.equal((ownerBalanceBefore + paidEthers) / 10n**18n); // Owner balance increased
+            expect((await ethers.provider.getBalance(owner.address)) / 10n ** 18n).to.equal((ownerBalanceBefore + paidEthers) / 10n ** 18n); // Owner balance increased
         });
 
         it("Should correctly end sale two", async function () {
@@ -601,7 +611,7 @@ describe("ICO Contract", function () {
 
             // End SaleTwo
             await ico.endSale();
-            
+
             const saleOne = await ico.saleOne();
             const saleTwo = await ico.saleTwo();
 
@@ -612,7 +622,7 @@ describe("ICO Contract", function () {
             const totalClaimedTokens = claimedTokensAddr1 + claimedTokensAddr2 + claimedTokensAddr3 + claimedTokensAddr4;
 
             expect(await bearRumble.balanceOf(ico.target)).to.equal(saleTwo[2] + saleOne[2] - totalClaimedTokens);
-            expect((await ethers.provider.getBalance(owner.address)) / 10n**18n).to.equal((ownerBalanceBefore + paidEthers) / 10n**18n); 
+            expect((await ethers.provider.getBalance(owner.address)) / 10n ** 18n).to.equal((ownerBalanceBefore + paidEthers) / 10n ** 18n);
         });
 
         it("Should not end sale if not the owner", async function () {
