@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
-describe.only("ICO Contract", function () {
+describe("ICO Contract", function () {
     let ICO, BearRumble, ico, bearRumble, owner, addr1, addr2, addr3, addr4;
 
     // Set deployment parameters
@@ -330,6 +330,27 @@ describe.only("ICO Contract", function () {
                 { value: (tokenAmount / BigInt(saleTwoPrice)) + 1n }))
                 .to.be.revertedWith("Wrong amount of Ether sent");
         });
+
+        it("Should not buy tokens if the amount is less than the minimum purchase", async function () {
+            // Set the timestamp to be within SaleOne
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart]);
+
+            // Add addr1 to the whitelist
+            await ico.manageWhitelist([addr1.address], [true]);
+
+            // Buy tokens with addr1
+            const tokenAmount = saleOneMinPurchase - 1n;
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) }))
+                .to.be.revertedWith("Amount less than minimum purchase");
+
+            // Set the timestamp to be within SaleTwo
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart]);
+
+            // Buy tokens with addr1
+            const tokenAmount2 = saleTwoMinPurchase - 1n;
+            await expect(ico.connect(addr1).buyTokens(tokenAmount2, { value: tokenAmount2 / BigInt(saleTwoPrice) }))
+                .to.be.revertedWith("Amount less than minimum purchase");
+        });
     });
 
     describe("Claiming tokens", function () {
@@ -514,8 +535,35 @@ describe.only("ICO Contract", function () {
                 .to.be.revertedWithCustomError(ico, "OwnableUnauthorizedAccount");
         });
 
+        it("Should not burn tokens if the unsold tokens are zero", async function () {
+            // Set the timestamp to sale 1
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart]);
 
+            // WhiteList
+            await ico.manageWhitelist([addr1.address, addr2.address], [true, true]);
 
+            // Buy all tokens of sale 1
+            const tokenAmount = saleOneSupply;
+            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) });
+
+            // Set the timestamp to sale 2
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart]);
+
+            // Buy all tokens of sale 2
+            const tokenAmount2 = saleTwoSupply;
+            await ico.connect(addr2).buyTokens(tokenAmount2, { value: tokenAmount2 / BigInt(saleTwoPrice) });
+
+            // Set the timestamp to be after the sales have ended
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + 60 * 60 * 24 * 1]);
+
+            const contractTokenBalanceBefore = await bearRumble.balanceOf(ico.target);
+
+            // Burn unsold tokens
+            await ico.burnUnsoldTokens();
+
+            // Check if the unsold tokens were burned correctly
+            expect(await bearRumble.balanceOf(ico.target)).to.equal(contractTokenBalanceBefore);
+        });
     });
 
     describe("Ending sale", function () {
@@ -565,6 +613,35 @@ describe.only("ICO Contract", function () {
 
             expect(await bearRumble.balanceOf(ico.target)).to.equal(saleTwo[2] + saleOne[2] - totalClaimedTokens);
             expect((await ethers.provider.getBalance(owner.address)) / 10n**18n).to.equal((ownerBalanceBefore + paidEthers) / 10n**18n); 
+        });
+
+        it("Should not end sale if not the owner", async function () {
+            // Set the timestamp to be between SaleOne and SaleTwo
+            await ethers.provider.send("evm_setNextBlockTimestamp", [(saleOneEnd + saleTwoStart) / 2]);
+
+            // End SaleOne
+            await expect(ico.connect(addr1).endSale())
+                .to.be.revertedWithCustomError(ico, "OwnableUnauthorizedAccount");
+        });
+
+        it("Should not end sale if the sale is not over", async function () {
+            // Set the timestamp to be before SaleOne
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart - 60 * 60 * 24 * 1]);
+
+            // End SaleOne
+            await expect(ico.endSale()).to.be.revertedWith("Cannot end the sale yet");
+
+            // Set the timestamp to be during SaleOne
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart + 60 * 60 * 24 * 1]);
+
+            // End SaleOne 
+            await expect(ico.endSale()).to.be.revertedWith("Cannot end the sale yet");
+
+            // Set the timestamp to be during SaleTwo
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart + 60 * 60 * 24 * 1]);
+
+            // End SaleTwo
+            await expect(ico.endSale()).to.be.revertedWith("Cannot end the sale yet");
         });
     });
 });
