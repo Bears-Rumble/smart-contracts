@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {BearRumble} from "./BearRumble.sol";
 
@@ -15,7 +16,7 @@ import {BearRumble} from "./BearRumble.sol";
  *         The buyers can buy tokens and claim them after the vesting period
  */
 
-contract ICO is Ownable, ReentrancyGuard {
+contract ICO is Ownable, ReentrancyGuard, Pausable {
     BearRumble token;
 
     /**
@@ -120,7 +121,7 @@ contract ICO is Ownable, ReentrancyGuard {
      */
     function buyTokens(
         uint256 _amount
-    ) external payable onlyWhiteListed nonReentrant {
+    ) external payable onlyWhiteListed nonReentrant whenNotPaused {
         setSaleStage();
 
         // Calculate the token price based on the current sale stage
@@ -177,7 +178,7 @@ contract ICO is Ownable, ReentrancyGuard {
      * @notice The claimable tokens are calculated based on the user's bought tokens, vesting period, and cliff period.
      * @notice The claimed tokens are updated for the user and the claimable tokens are transferred to the user's address.
      */
-    function claimTokens() external onlyWhiteListed nonReentrant {
+    function claimTokens() external onlyWhiteListed nonReentrant whenNotPaused {
         setSaleStage();
         require(
             saleStage == SaleStages.VestingPeriod ||
