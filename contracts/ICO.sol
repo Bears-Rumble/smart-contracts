@@ -35,6 +35,9 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         uint256 minPurchase;
         uint256 startTime;
         uint256 endTime;
+        uint256 minSoldTokens;
+        bool isRefundActive;
+        bool isEnded;
     }
 
     /**
@@ -52,6 +55,8 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         SaleOne,
         BetweenSaleOneAndTwo,
         SaleTwo,
+        BetweenSaleTwoAndThree,
+        SaleThree,
         CliffPeriod,
         VestingPeriod,
         Ended
@@ -61,6 +66,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     // Sale details
     Sale public saleOne;
     Sale public saleTwo;
+    Sale public saleThree;
 
     // Whitelist, true if the address is whitelisted. Only whitelisted addresses can buy tokens
     mapping(address => bool) public whitelist;
@@ -74,7 +80,10 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     uint256 public vestingPeriod;
 
     // Token tracking
-    mapping(address => uint256) public boughtTokens;
+    mapping(address => uint256) public boughtTokensSaleOne;
+    mapping(address => uint256) public boughtTokensSaleTwo;
+    mapping(address => uint256) public boughtTokensSaleThree;
+
     mapping(address => uint256) public claimedTokens;
 
     // Events
@@ -87,6 +96,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         address _token,
         Sale memory _saleOne,
         Sale memory _saleTwo,
+        Sale memory _saleThree,
         uint256 _cliffPeriod,
         uint256 _vestingPeriod
     ) Ownable(msg.sender) {
@@ -94,15 +104,33 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
         saleOne.price = _saleOne.price;
         saleOne.tokenSupply = _saleOne.tokenSupply;
+        saleOne.soldTokens = 0;
         saleOne.minPurchase = _saleOne.minPurchase;
         saleOne.startTime = _saleOne.startTime;
         saleOne.endTime = _saleOne.endTime;
+        saleOne.minSoldTokens = _saleOne.minSoldTokens;
+        saleOne.isRefundActive = false;
+        saleOne.isEnded = false;
 
         saleTwo.price = _saleTwo.price;
         saleTwo.tokenSupply = _saleTwo.tokenSupply;
+        saleTwo.soldTokens = 0;
         saleTwo.minPurchase = _saleTwo.minPurchase;
         saleTwo.startTime = _saleTwo.startTime;
         saleTwo.endTime = _saleTwo.endTime;
+        saleTwo.minSoldTokens = _saleTwo.minSoldTokens;
+        saleTwo.isRefundActive = false;
+        saleTwo.isEnded = false;
+
+        saleThree.price = _saleThree.price;
+        saleThree.tokenSupply = _saleThree.tokenSupply;
+        saleThree.soldTokens = 0;
+        saleThree.minPurchase = _saleThree.minPurchase;
+        saleThree.startTime = _saleThree.startTime;
+        saleThree.endTime = _saleThree.endTime;
+        saleThree.minSoldTokens = _saleThree.minSoldTokens;
+        saleThree.isRefundActive = false;
+        saleThree.isEnded = false;
 
         cliffPeriod = _cliffPeriod;
         vestingPeriod = _vestingPeriod;
@@ -113,7 +141,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         whitelist[msg.sender] = true;
     }
 
-    /************************************ External functions ************************************/
+    /************************************ External users functions ************************************/
 
     /**
      * @notice Buy tokens from the ICO
@@ -121,15 +149,15 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      */
     function buyTokens(
         uint256 _amount
-    ) external payable onlyWhiteListed nonReentrant whenNotPaused {
-        setSaleStage();
-
+    ) external payable onlyWhiteListed nonReentrant whenNotPaused setSaleStage {
         // Calculate the token price based on the current sale stage
-        uint256 price;
+        uint256 price = 0;
         if (saleStage == SaleStages.SaleOne) {
             price = saleOne.price;
         } else if (saleStage == SaleStages.SaleTwo) {
             price = saleTwo.price;
+        } else if (saleStage == SaleStages.SaleThree) {
+            price = saleThree.price;
         } else {
             revert("Sale not active");
         }
@@ -148,6 +176,11 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 _amount >= saleTwo.minPurchase,
                 "Amount less than minimum purchase"
             );
+        } else if (saleStage == SaleStages.SaleThree) {
+            require(
+                _amount >= saleThree.minPurchase,
+                "Amount less than minimum purchase"
+            );
         }
 
         //Check if enough tokens are available for the sale and update the sold tokens
@@ -157,16 +190,22 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 "Insufficient remaining tokens supply"
             );
             saleOne.soldTokens += _amount;
+            boughtTokensSaleOne[msg.sender] += _amount;
         } else if (saleStage == SaleStages.SaleTwo) {
             require(
                 saleTwo.soldTokens + _amount <= saleTwo.tokenSupply,
                 "Insufficient remaining tokens supply"
             );
             saleTwo.soldTokens += _amount;
+            boughtTokensSaleTwo[msg.sender] += _amount;
+        } else if (saleStage == SaleStages.SaleThree) {
+            require(
+                saleThree.soldTokens + _amount <= saleThree.tokenSupply,
+                "Insufficient remaining tokens supply"
+            );
+            saleThree.soldTokens += _amount;
+            boughtTokensSaleThree[msg.sender] += _amount;
         }
-
-        // Register the bought tokens
-        boughtTokens[msg.sender] += _amount;
 
         // Emit the TokenPurchased event
         emit TokenPurchased(msg.sender, _amount, price);
@@ -178,8 +217,13 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      * @notice The claimable tokens are calculated based on the user's bought tokens, vesting period, and cliff period.
      * @notice The claimed tokens are updated for the user and the claimable tokens are transferred to the user's address.
      */
-    function claimTokens() external onlyWhiteListed nonReentrant whenNotPaused {
-        setSaleStage();
+    function claimTokens()
+        external
+        onlyWhiteListed
+        nonReentrant
+        whenNotPaused
+        setSaleStage
+    {
         require(
             saleStage == SaleStages.VestingPeriod ||
                 saleStage == SaleStages.Ended,
@@ -190,14 +234,21 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
         uint256 claimableTokens = 0;
         uint256 unlockedTokens = 0;
+        uint256 boughtTokens = 0;
+
+        if (!saleOne.isRefundActive)
+            boughtTokens += boughtTokensSaleOne[msg.sender];
+        if (!saleTwo.isRefundActive)
+            boughtTokens += boughtTokensSaleTwo[msg.sender];
+        if (!saleThree.isRefundActive)
+            boughtTokens += boughtTokensSaleThree[msg.sender];
 
         if (saleStage == SaleStages.VestingPeriod) {
             unlockedTokens =
-                (boughtTokens[msg.sender] *
-                    (currentTime - saleTwo.endTime - cliffPeriod)) /
+                (boughtTokens * (currentTime - saleTwo.endTime - cliffPeriod)) /
                 vestingPeriod;
         } else if (saleStage == SaleStages.Ended) {
-            unlockedTokens = boughtTokens[msg.sender];
+            unlockedTokens = boughtTokens;
         }
 
         if (unlockedTokens > claimedTokens[msg.sender]) {
@@ -213,38 +264,31 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         emit TokenClaimed(msg.sender, claimableTokens);
     }
 
-    /************************************ Owner functions ************************************/
+    function claimRefund(uint256 _saleToRefund) external nonReentrant whenNotPaused setSaleStage {
+        require(_saleToRefund == 1 || _saleToRefund == 2 || _saleToRefund == 3, "Invalid sale to refund");
 
-    /**
-     * @dev Burns unsold tokens after the ICO ends.
-     * Only the contract owner can call this function.
-     * The function checks if the sale stage is either CliffPeriod, VestingPeriod, or Ended.
-     * If there are unsold tokens, they are burned by calling the `burn` function of the token contract.
-     * Emits a `TokenBurned` event with the number of tokens burned.
-     */
-    function burnUnsoldTokens() public onlyOwner {
-        // Set the sale stage
-        setSaleStage();
-
-        // Check if the sale stage is either CliffPeriod, VestingPeriod, or Ended
-        require(
-            saleStage == SaleStages.CliffPeriod ||
-            saleStage == SaleStages.VestingPeriod ||
-            saleStage == SaleStages.Ended,
-            "Sale not ended"
-        );
-
-        // Calculate the number of unsold tokens
-        uint256 unsoldTokensSaleOne = saleOne.tokenSupply - saleOne.soldTokens;
-        uint256 unsoldTokensSaleTwo = saleTwo.tokenSupply - saleTwo.soldTokens;
-        uint256 unsoldTokens = unsoldTokensSaleOne + unsoldTokensSaleTwo;
-
-        // Burn the unsold tokens if there are any
-        if (unsoldTokens != 0) {
-            token.burn(unsoldTokens);
-            emit TokenBurned(unsoldTokens);
+        uint256 refundAmount = 0;
+        if (_saleToRefund == 1) {
+            require(saleOne.isRefundActive, "Refund not active");
+            require(boughtTokensSaleOne[msg.sender] > 0, "No tokens to refund");
+            refundAmount = boughtTokensSaleOne[msg.sender] / saleOne.price;
+            boughtTokensSaleOne[msg.sender] = 0;
+        } else if (_saleToRefund == 2) {
+            require(saleTwo.isRefundActive, "Refund not active");
+            require(boughtTokensSaleTwo[msg.sender] > 0, "No tokens to refund");
+            refundAmount = boughtTokensSaleTwo[msg.sender] / saleTwo.price;
+            boughtTokensSaleTwo[msg.sender] = 0;
+        } else if (_saleToRefund == 3) {
+            require(saleThree.isRefundActive, "Refund not active");
+            require(boughtTokensSaleThree[msg.sender] > 0, "No tokens to refund");
+            refundAmount = boughtTokensSaleThree[msg.sender] / saleThree.price;
+            boughtTokensSaleThree[msg.sender] = 0;
         }
+
+        payable(msg.sender).transfer(refundAmount);
     }
+
+    /************************************ Owner functions ************************************/
 
     /**
      * @dev Manages the whitelist status of multiple addresses.
@@ -267,39 +311,83 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @dev Ends the sale and performs necessary actions based on the current sale stage.
+     * @dev Ends a sale and performs necessary actions based on the current sale stage.
      * Only the contract owner can call this function.
-     * If the sale stage is between Sale One and Sale Two, the unsold tokens from Sale One are moved to Sale Two,
-     * and the sale benefits are sent to the owner.
-     * If the sale stage is Sale Two, the unsold tokens are burned, and the sale benefits are sent to the owner.
+     * Ending a sale either activates the refund mechanism or transfers the received Ether to the owner. The unsold tokens are then burned.
      */
-    function endSale() external onlyOwner {
-        setSaleStage();
-        require(
-            saleStage == SaleStages.BetweenSaleOneAndTwo ||
-                saleStage > SaleStages.SaleTwo,
-            "Cannot end the sale yet"
-        );
+    function endSale(
+        uint256 _saleToEnd
+    ) external onlyOwner setSaleStage nonReentrant {
+        if (_saleToEnd == 1) {
+            require(saleStage > SaleStages.SaleOne, "Sale One not ended yet");
+            require(!saleOne.isEnded, "Sale One already ended"); // Ensure the sale has not already ended
+            saleOne.isEnded = true; 
 
-        if (saleStage == SaleStages.BetweenSaleOneAndTwo) {
-            // After sale one, move the unsold tokens from sale one to sale two
-            uint256 unsoldTokensSaleOne = saleOne.tokenSupply -
-                saleOne.soldTokens;
-            saleTwo.tokenSupply += unsoldTokensSaleOne;
-            saleOne.tokenSupply = saleOne.soldTokens;
+            if (saleOne.soldTokens < saleOne.minSoldTokens) {
+                saleOne.isRefundActive = true; // Activate refund, allowing users to claim their Ether back
+                saleOne.soldTokens = 0; // Reset sold tokens to 0 as all tokens will be refunded, every token will be burned
+            } else {
+                uint256 saleOneReceivedETH = saleOne.soldTokens / saleOne.price; // Calculate the amount of Ether received from the sale
+                payable(owner()).transfer(saleOneReceivedETH); // Transfer the received Ether to the owner
+            }
+            burnUnsoldTokens(_saleToEnd); // Burn the unsold tokens anyway
+        } else if (_saleToEnd == 2) {
+            require(saleStage > SaleStages.SaleTwo, "Sale Two not ended yet");
+            require(!saleTwo.isEnded, "Sale Two already ended");
+            saleTwo.isEnded = true;
 
-            // Send the sale benefits to the owner
-            payable(owner()).transfer(address(this).balance);
-        } else {
-            // After sale two, burn the unsold tokens
-            burnUnsoldTokens();
+            if (saleTwo.soldTokens < saleTwo.minSoldTokens) {
+                saleTwo.isRefundActive = true;
+            } else {
+                uint256 saleTwoReceivedETH = saleTwo.soldTokens / saleTwo.price;
+                payable(owner()).transfer(saleTwoReceivedETH);
+            }
+            burnUnsoldTokens(_saleToEnd);
+        } else if (_saleToEnd == 3) {
+            require(
+                saleStage > SaleStages.SaleThree,
+                "Sale Three not ended yet"
+            );
+            require(!saleThree.isEnded, "Sale Three already ended");
+            saleThree.isEnded = true;
 
-            // Send the sale benefits to the owner
-            payable(owner()).transfer(address(this).balance);
+            if (saleThree.soldTokens < saleThree.minSoldTokens) {
+                saleThree.isRefundActive = true;
+            } else {
+                uint256 saleThreeReceivedETH = saleThree.soldTokens /
+                    saleThree.price;
+                payable(owner()).transfer(saleThreeReceivedETH);
+            }
+            burnUnsoldTokens(_saleToEnd);
         }
     }
 
     /************************************ Internal functions ************************************/
+
+    /**
+     * @dev Burns unsold tokens after the ICO ends.
+     * If there are unsold tokens, they are burned by calling the `burn` function of the token contract.
+     * Emits a `TokenBurned` event with the number of tokens burned.
+     */
+    function burnUnsoldTokens(uint256 _saleToBurn) internal {
+        // Calculate the number of unsold tokens
+        uint256 unsoldTokens = 0;
+        if (_saleToBurn == 1) {
+            unsoldTokens = saleOne.tokenSupply - saleOne.soldTokens;
+        } else if (_saleToBurn == 2) {
+            unsoldTokens = saleTwo.tokenSupply - saleTwo.soldTokens;
+        } else if (_saleToBurn == 3) {
+            unsoldTokens = saleThree.tokenSupply - saleThree.soldTokens;
+        }
+
+        // Burn the unsold tokens if there are any
+        if (unsoldTokens != 0) {
+            emit TokenBurned(unsoldTokens);
+            token.burn(unsoldTokens);
+        }
+    }
+
+    /************************************ Modifiers functions ************************************/
 
     /**
      * @dev Sets the sale stage based on the current time.
@@ -312,39 +400,54 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      * - VestingPeriod: After the cliff period and within the vesting period.
      * - Ended: After the vesting period or if the current time is not within any of the defined stages.
      */
-    function setSaleStage() internal {
+    modifier setSaleStage() {
         uint256 currentTime = block.timestamp;
+        SaleStages _saleStage = SaleStages.BeforeStart;
 
         if (currentTime < saleOne.startTime) {
-            saleStage = SaleStages.BeforeStart;
+            _saleStage = SaleStages.BeforeStart;
         } else if (
             currentTime >= saleOne.startTime && currentTime <= saleOne.endTime
         ) {
-            saleStage = SaleStages.SaleOne;
+            _saleStage = SaleStages.SaleOne;
         } else if (
             currentTime > saleOne.endTime && currentTime < saleTwo.startTime
         ) {
-            saleStage = SaleStages.BetweenSaleOneAndTwo;
+            _saleStage = SaleStages.BetweenSaleOneAndTwo;
         } else if (
             currentTime >= saleTwo.startTime && currentTime < saleTwo.endTime
         ) {
-            saleStage = SaleStages.SaleTwo;
+            _saleStage = SaleStages.SaleTwo;
         } else if (
-            currentTime >= saleTwo.endTime &&
-            currentTime < saleTwo.endTime + cliffPeriod
+            currentTime > saleTwo.endTime && currentTime < saleThree.startTime
         ) {
-            saleStage = SaleStages.CliffPeriod;
+            _saleStage = SaleStages.BetweenSaleTwoAndThree;
         } else if (
-            currentTime >= saleTwo.endTime + cliffPeriod &&
-            currentTime < saleTwo.endTime + cliffPeriod + vestingPeriod
+            currentTime >= saleThree.startTime &&
+            currentTime <= saleThree.endTime
         ) {
-            saleStage = SaleStages.VestingPeriod;
+            _saleStage = SaleStages.SaleThree;
+        } else if (
+            currentTime >= saleThree.endTime &&
+            currentTime < saleThree.endTime + cliffPeriod
+        ) {
+            _saleStage = SaleStages.CliffPeriod;
+        } else if (
+            currentTime >= saleThree.endTime + cliffPeriod &&
+            currentTime < saleThree.endTime + cliffPeriod + vestingPeriod
+        ) {
+            _saleStage = SaleStages.VestingPeriod;
         } else {
-            saleStage = SaleStages.Ended;
+            _saleStage = SaleStages.Ended;
         }
-    }
 
-    /************************************ Modifiers functions ************************************/
+        if (_saleStage != saleStage) {
+            saleStage = _saleStage;
+            emit SaleStageChanged(saleStage);
+        }
+
+        _;
+    }
 
     modifier onlyWhiteListed() {
         require(whitelist[msg.sender], "Not whitelisted");
