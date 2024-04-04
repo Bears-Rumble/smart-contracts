@@ -14,6 +14,13 @@ import {BearRumble} from "./BearRumble.sol";
  *         The ICO has two sales, a cliff period and a vesting period
  *         The owner can manage the whitelist, end the sale and burn the unsold tokens
  *         The buyers can buy tokens and claim them after the vesting period
+ * 
+ *  BearRumble is a Play2Earn & Free2Play multiplayer Web3 Game
+ *  Socials:
+ *  - Website:
+ *  - Twitter:
+ *  - Telegram:
+ *  - Discord:
  */
 
 contract ICO is Ownable, ReentrancyGuard, Pausable {
@@ -236,16 +243,16 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         uint256 unlockedTokens = 0;
         uint256 boughtTokens = 0;
 
-        if (!saleOne.isRefundActive)
+        if (!saleOne.isRefundActive && saleOne.isEnded)
             boughtTokens += boughtTokensSaleOne[msg.sender];
-        if (!saleTwo.isRefundActive)
+        if (!saleTwo.isRefundActive && saleTwo.isEnded)
             boughtTokens += boughtTokensSaleTwo[msg.sender];
-        if (!saleThree.isRefundActive)
+        if (!saleThree.isRefundActive && saleThree.isEnded)
             boughtTokens += boughtTokensSaleThree[msg.sender];
 
         if (saleStage == SaleStages.VestingPeriod) {
             unlockedTokens =
-                (boughtTokens * (currentTime - saleTwo.endTime - cliffPeriod)) /
+                (boughtTokens * (currentTime - saleThree.endTime - cliffPeriod)) /
                 vestingPeriod;
         } else if (saleStage == SaleStages.Ended) {
             unlockedTokens = boughtTokens;
@@ -257,11 +264,10 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             revert("No claimable tokens");
         }
 
+        emit TokenClaimed(msg.sender, claimableTokens);
         claimedTokens[msg.sender] = unlockedTokens;
 
         token.transfer(msg.sender, claimableTokens);
-
-        emit TokenClaimed(msg.sender, claimableTokens);
     }
 
     function claimRefund(uint256 _saleToRefund) external nonReentrant whenNotPaused setSaleStage {
@@ -270,17 +276,17 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         uint256 refundAmount = 0;
         if (_saleToRefund == 1) {
             require(saleOne.isRefundActive, "Refund not active");
-            require(boughtTokensSaleOne[msg.sender] > 0, "No tokens to refund");
+            require(boughtTokensSaleOne[msg.sender] > 0, "No ethers to refund");
             refundAmount = boughtTokensSaleOne[msg.sender] / saleOne.price;
             boughtTokensSaleOne[msg.sender] = 0;
         } else if (_saleToRefund == 2) {
             require(saleTwo.isRefundActive, "Refund not active");
-            require(boughtTokensSaleTwo[msg.sender] > 0, "No tokens to refund");
+            require(boughtTokensSaleTwo[msg.sender] > 0, "No ethers to refund");
             refundAmount = boughtTokensSaleTwo[msg.sender] / saleTwo.price;
             boughtTokensSaleTwo[msg.sender] = 0;
         } else if (_saleToRefund == 3) {
             require(saleThree.isRefundActive, "Refund not active");
-            require(boughtTokensSaleThree[msg.sender] > 0, "No tokens to refund");
+            require(boughtTokensSaleThree[msg.sender] > 0, "No ethers to refund");
             refundAmount = boughtTokensSaleThree[msg.sender] / saleThree.price;
             boughtTokensSaleThree[msg.sender] = 0;
         }
@@ -332,12 +338,13 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             }
             burnUnsoldTokens(_saleToEnd); // Burn the unsold tokens anyway
         } else if (_saleToEnd == 2) {
-            require(saleStage > SaleStages.SaleTwo, "Sale Two not ended yet");
+            require(saleStage > SaleStages.SaleTwo, "Sale One not ended yet");
             require(!saleTwo.isEnded, "Sale Two already ended");
             saleTwo.isEnded = true;
 
             if (saleTwo.soldTokens < saleTwo.minSoldTokens) {
                 saleTwo.isRefundActive = true;
+                saleTwo.soldTokens = 0;
             } else {
                 uint256 saleTwoReceivedETH = saleTwo.soldTokens / saleTwo.price;
                 payable(owner()).transfer(saleTwoReceivedETH);
@@ -353,6 +360,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
             if (saleThree.soldTokens < saleThree.minSoldTokens) {
                 saleThree.isRefundActive = true;
+                saleThree.soldTokens = 0;
             } else {
                 uint256 saleThreeReceivedETH = saleThree.soldTokens /
                     saleThree.price;
