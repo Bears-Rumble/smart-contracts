@@ -30,7 +30,13 @@ To install and use the Bear Rumble project, follow these steps:
     npx hardhat test
     ```
 
-7. Deploy the smart contracts to a local development network:
+7. Check the tests' coverage:
+
+    ```bash
+    npx hardhat coverage
+    ```
+
+8. Deploy the smart contracts to a local development network:
 
     ```bash
     npx hardhat run scripts/deploy.js --network localhost
