@@ -627,7 +627,7 @@ describe("ICO Contract", function () {
         });
     });
 
-    describe.only("Claiming tokens", function () {
+    describe("Claiming tokens", function () {
         it("Should claim tokens after the sale has ended", async function () {
             // Set the timestamp to be within SaleOne
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart + 60 * 60 * 24 * 1]);
