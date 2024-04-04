@@ -629,21 +629,39 @@ describe("ICO Contract", function () {
 
     describe("Claiming tokens", function () {
         it("Should claim tokens after the sale has ended", async function () {
-            // Set the timestamp to be within SaleOne
-            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart + 60 * 60 * 24 * 1]);
-
             // Add addr1 to the whitelist
             await ico.manageWhitelist([addr1.address], [true]);
 
-            // Buy tokens with addr1
-            const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) });
+            // Set the timestamp to be within SaleOne
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart + 60 * 60 * 24 * 1]);
 
-            // Set the timestamp to be after the sale has ended
-            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + 60 * 60 * 24 * 1]);
+            // Buy tokens with addr1
+            const tokenAmountSaleOne = ethers.parseEther((saleOnePrice * 10).toString());
+            await ico.connect(addr1).buyTokens(tokenAmountSaleOne, { value: tokenAmountSaleOne / BigInt(saleOnePrice) });
+
+            // Set the timestamp to be within SaleTwo
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart + 60 * 60 * 24 * 1]);
+            await ico.endSale(1);
+
+            // Buy tokens with addr1
+            const tokenAmountSaleTwo = ethers.parseEther((saleTwoPrice * 10).toString());
+            await ico.connect(addr1).buyTokens(tokenAmountSaleTwo, { value: tokenAmountSaleTwo / BigInt(saleTwoPrice) });
+
+            // Set the timestamp to be within SaleThree
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeStart + 60 * 60 * 24 * 1]);
 
             // End SaleTwo
             await ico.endSale(2);
+
+            // Buy tokens with addr1
+            const tokenAmountSaleThree = ethers.parseEther((saleThreePrice * 500).toString());
+            await ico.connect(addr1).buyTokens(tokenAmountSaleThree, { value: tokenAmountSaleThree / BigInt(saleThreePrice) });
+
+            // Set the timestamp to be after the sale has ended
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + 60 * 60 * 24 * 1]);
+
+            // End SaleThree
+            await ico.endSale(3);
 
             // Set the timestamp to be after the cliff period and within the vesting period
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + cliffPeriod + vestingPeriod / 2]);
@@ -653,10 +671,10 @@ describe("ICO Contract", function () {
             await ico.connect(addr1).claimTokens();
             const finalBalance = await bearRumble.balanceOf(addr1.address);
             const claimedTokens = await ico.claimedTokens(addr1.address);
-
+            const totalBoughtTokens = tokenAmountSaleOne + tokenAmountSaleTwo + tokenAmountSaleThree;
             // Check if the tokens were claimed correctly
-            expect(finalBalance).to.equal(initialBalance + tokenAmount / 2n);
-            expect(claimedTokens).to.equal(tokenAmount / 2n);
+            expect(finalBalance).to.equal(initialBalance + totalBoughtTokens / 2n);
+            expect(claimedTokens).to.equal(totalBoughtTokens / 2n);
         });
 
         it("Should claim all tokens after the vesting period", async function () {
@@ -672,7 +690,7 @@ describe("ICO Contract", function () {
 
             // Set the timestamp to be after the vesting period
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + cliffPeriod + vestingPeriod]);
-            
+
             // End SaleTwo
             await ico.endSale(2);
 
