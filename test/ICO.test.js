@@ -101,6 +101,27 @@ describe("ICO Contract", function () {
         await ico.connect(addr3).buyTokens(tokenAmount2, { value: paidEthers2 });
         await ico.connect(addr4).buyTokens(tokenAmount2, { value: paidEthers2 });
 
+        await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + 60 * 60 * 24 * 1]);
+
+        // End SaleTwo
+        await ico.endSale(2);
+
+        // Set the timestamp to be within SaleThree
+        await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeStart]);
+
+        // Buy tokens with addr1 to addr4
+        const tokenAmount3 = ethers.parseEther((saleThreePrice * 10).toString());
+        const paidEthers3 = tokenAmount3 / BigInt(saleThreePrice);
+        await ico.connect(addr1).buyTokens(tokenAmount3, { value: paidEthers3 });
+        await ico.connect(addr2).buyTokens(tokenAmount3, { value: paidEthers3 });
+        await ico.connect(addr3).buyTokens(tokenAmount3, { value: paidEthers3 });
+        await ico.connect(addr4).buyTokens(tokenAmount3 * 30n, { value: paidEthers3 * 30n });
+
+        await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + 60 * 60 * 24 * 1]);
+
+        // End SaleThree
+        await ico.endSale(3);
+
         // Set the timestamp to be in the vesting period
         await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + cliffPeriod + vestingPeriod / 2]);
 
@@ -110,7 +131,17 @@ describe("ICO Contract", function () {
         await ico.connect(addr3).claimTokens();
         await ico.connect(addr4).claimTokens();
 
-        return paidEthers2 * 4n;
+        await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + cliffPeriod + vestingPeriod + 60 * 60 * 24 * 1]);
+
+        // Claim tokens with addr1 to addr4
+        await ico.connect(addr1).claimTokens();
+        await ico.connect(addr2).claimTokens();
+        await ico.connect(addr3).claimTokens();
+        await ico.connect(addr4).claimTokens();
+
+        const totalPaidEther = paidEthers1 * 18n + paidEthers2 * 4n + paidEthers3 * 38n;
+
+        return totalPaidEther;
     }
 
     /**
@@ -868,5 +899,14 @@ describe("ICO Contract", function () {
             await expect(ico.connect(addr1).claimRefund(3)).to.be.revertedWith("No ethers to refund");
         });
 
+    });
+
+    describe.only("Complete ICO simulation", function () {
+        it("Should simulate the complete ICO process", async function () {
+            const paidEtherInSales = await simulateCompleteICO();
+            const ownerETHBalance = await ethers.provider.getBalance(owner.address);
+            console.log("Owner ETH balance: ", ownerETHBalance.toString());
+            console.log("Paid Ether in sales: ", paidEtherInSales.toString());
+        });
     });
 });
