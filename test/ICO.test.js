@@ -901,7 +901,7 @@ describe("ICO Contract", function () {
 
     });
 
-    describe.only("Complete ICO simulation", function () {
+    describe("Complete ICO simulation", function () {
         it("Should simulate the complete ICO process", async function () {
             const paidEtherInSales = await simulateCompleteICO();
             const ownerETHBalance = await ethers.provider.getBalance(owner.address);
