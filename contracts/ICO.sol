@@ -11,9 +11,13 @@ import {BearRumble} from "./BearRumble.sol";
  * @title  ICO Contract
  * @author IARD Solutions: https://iard.solutions - Web3 Experts suited to your needs
  * @notice This contract is used to manage the ICO of the BearRumble token
- *         The ICO has two sales, a cliff period and a vesting period
+ *         The ICO has three sales, a cliff period and a vesting period
  *         The owner can manage the whitelist, end the sale and burn the unsold tokens
  *         The buyers can buy tokens and claim them after the vesting period
+ *         If a sale ends and the minimum tokens are not sold, the buyers can claim a refund
+ * 
+ * Important notes:
+ * - The Sold ERC20 token total sold amound must be sent to the contract address before any purchase
  * 
  *  BearRumble is a Play2Earn & Free2Play multiplayer Web3 Game
  *  Socials:
@@ -34,6 +38,9 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      * @param minPurchase Minimum purchase in the smallest unit of the token
      * @param startTime Timestamp of the start of the sale in seconds
      * @param endTime Timestamp of the end of the sale in seconds
+     * @param minSoldTokens Minimum amount of tokens to be sold for the sale to be successful
+     * @param isRefundActive True if the refund mechanism is active
+     * @param isEnded True if the sale has ended
      */
     struct Sale {
         uint256 price;
@@ -98,6 +105,8 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     event TokenClaimed(address claimer, uint256 amount);
     event SaleStageChanged(SaleStages newStage);
     event TokenBurned(uint256 amount);
+    event RefundClaimed(address claimer, uint256 amount);
+    event SaleEnded(uint256 saleNumber);
 
     constructor(
         address _token,
@@ -270,15 +279,14 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         token.transfer(msg.sender, claimableTokens);
     }
 
-    function claimRefund(uint256 _saleToRefund) external nonReentrant whenNotPaused setSaleStage {
-        require(_saleToRefund == 1 || _saleToRefund == 2 || _saleToRefund == 3, "Invalid sale to refund");
+    function claimRefund(uint256 _saleToRefund) external nonReentrant whenNotPaused setSaleStage saleMustExist(_saleToRefund) {
 
         uint256 refundAmount = 0;
         if (_saleToRefund == 1) {
             require(saleOne.isRefundActive, "Refund not active");
             require(boughtTokensSaleOne[msg.sender] > 0, "No ethers to refund");
-            refundAmount = boughtTokensSaleOne[msg.sender] / saleOne.price;
-            boughtTokensSaleOne[msg.sender] = 0;
+            refundAmount = boughtTokensSaleOne[msg.sender] / saleOne.price; // Calculate the amount of Ether to refund based on the bought tokens and the token price
+            boughtTokensSaleOne[msg.sender] = 0; // Reset the bought tokens to 0 as all tokens will be refunded
         } else if (_saleToRefund == 2) {
             require(saleTwo.isRefundActive, "Refund not active");
             require(boughtTokensSaleTwo[msg.sender] > 0, "No ethers to refund");
@@ -290,7 +298,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             refundAmount = boughtTokensSaleThree[msg.sender] / saleThree.price;
             boughtTokensSaleThree[msg.sender] = 0;
         }
-
+        emit RefundClaimed(msg.sender, refundAmount);
         payable(msg.sender).transfer(refundAmount);
     }
 
@@ -319,11 +327,14 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     /**
      * @dev Ends a sale and performs necessary actions based on the current sale stage.
      * Only the contract owner can call this function.
-     * Ending a sale either activates the refund mechanism or transfers the received Ether to the owner. The unsold tokens are then burned.
+     * Ending a sale either activates the refund mechanism or transfers the received Ether to the owner,
+     * depending on whether the minimum tokens sold amount is reached or not.
+     * The unsold tokens are then burned.
      */
     function endSale(
         uint256 _saleToEnd
-    ) external onlyOwner setSaleStage nonReentrant {
+    ) external onlyOwner setSaleStage nonReentrant saleMustExist(_saleToEnd) {
+
         if (_saleToEnd == 1) {
             require(saleStage > SaleStages.SaleOne, "Sale One not ended yet");
             require(!saleOne.isEnded, "Sale One already ended"); // Ensure the sale has not already ended
@@ -336,7 +347,6 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 uint256 saleOneReceivedETH = saleOne.soldTokens / saleOne.price; // Calculate the amount of Ether received from the sale
                 payable(owner()).transfer(saleOneReceivedETH); // Transfer the received Ether to the owner
             }
-            burnUnsoldTokens(_saleToEnd); // Burn the unsold tokens anyway
         } else if (_saleToEnd == 2) {
             require(saleStage > SaleStages.SaleTwo, "Sale One not ended yet");
             require(!saleTwo.isEnded, "Sale Two already ended");
@@ -349,7 +359,6 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 uint256 saleTwoReceivedETH = saleTwo.soldTokens / saleTwo.price;
                 payable(owner()).transfer(saleTwoReceivedETH);
             }
-            burnUnsoldTokens(_saleToEnd);
         } else if (_saleToEnd == 3) {
             require(
                 saleStage > SaleStages.SaleThree,
@@ -366,8 +375,10 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                     saleThree.price;
                 payable(owner()).transfer(saleThreeReceivedETH);
             }
-            burnUnsoldTokens(_saleToEnd);
         }
+        burnUnsoldTokens(_saleToEnd);
+
+        emit SaleEnded(_saleToEnd);
     }
 
     /************************************ Internal functions ************************************/
@@ -404,9 +415,11 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      * - SaleOne: During the first sale period.
      * - BetweenSaleOneAndTwo: After the first sale and before the start of the second sale.
      * - SaleTwo: During the second sale period.
+     * - BetweenSaleTwoAndThree: After the second sale and before the start of the third sale.
+     * - SaleThree: During the third sale period.
      * - CliffPeriod: After the second sale and within the cliff period.
      * - VestingPeriod: After the cliff period and within the vesting period.
-     * - Ended: After the vesting period or if the current time is not within any of the defined stages.
+     * - Ended: After the vesting period ends.
      */
     modifier setSaleStage() {
         uint256 currentTime = block.timestamp;
@@ -459,6 +472,11 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
     modifier onlyWhiteListed() {
         require(whitelist[msg.sender], "Not whitelisted");
+        _;
+    }
+
+    modifier saleMustExist(uint256 _saleNumber) {
+        require(_saleNumber == 1 || _saleNumber == 2 || _saleNumber == 3, "Invalid sale number");
         _;
     }
 }
