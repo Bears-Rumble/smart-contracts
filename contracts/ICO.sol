@@ -151,9 +151,6 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         cliffPeriod = _cliffPeriod;
         vestingPeriod = _vestingPeriod;
 
-        saleOne.soldTokens = 0;
-        saleTwo.soldTokens = 0;
-
         whitelist[msg.sender] = true;
     }
 
@@ -228,14 +225,14 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @dev Allows a whitelisted user to claim their tokens during the vesting period or after the ICO has ended.
-     * @notice This function can only be called by whitelisted users.
+     * @dev Allows users to claim their tokens during the vesting period or after the ICO has ended.
      * @notice The claimable tokens are calculated based on the user's bought tokens, vesting period, and cliff period.
      * @notice The claimed tokens are updated for the user and the claimable tokens are transferred to the user's address.
+     * @notice No need to check if the user has been whitelisted as the claimable tokens are based on the bought tokens. 
+     *  Also, it avoids giving the owner the ability to ban users after they bought tokens.
      */
     function claimTokens()
         external
-        onlyWhiteListed
         nonReentrant
         whenNotPaused
         setSaleStage
