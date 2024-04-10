@@ -15,10 +15,10 @@ import {BearRumble} from "./BearRumble.sol";
  *         The owner can manage the whitelist, end the sale and burn the unsold tokens
  *         The buyers can buy tokens and claim them after the vesting period
  *         If a sale ends and the minimum tokens are not sold, the buyers can claim a refund
- * 
+ *
  * Important notes:
  * - The Sold ERC20 token total sold amound must be sent to the contract address before any purchase
- * 
+ *
  *  BearRumble is a Play2Earn & Free2Play multiplayer Web3 Game
  *  Socials:
  *  - Website:
@@ -28,7 +28,6 @@ import {BearRumble} from "./BearRumble.sol";
  */
 
 contract ICO is Ownable, ReentrancyGuard, Pausable {
-    BearRumble token;
 
     /**
      * @notice Sale details
@@ -75,6 +74,9 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         VestingPeriod,
         Ended
     }
+
+    BearRumble public immutable token;
+
     SaleStages public saleStage;
 
     // Sale details
@@ -87,11 +89,11 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
     // Vesting
     // Cliff period in seconds
-    uint256 public cliffPeriod;
+    uint256 public immutable cliffPeriod;
 
     // Vesting period in seconds
     // 0% of the tokens will be claimable at the start of the vesting period and 100% at the end, linearly unlocking over the period
-    uint256 public vestingPeriod;
+    uint256 public immutable vestingPeriod;
 
     // Token tracking
     mapping(address => uint256) public boughtTokensSaleOne;
@@ -228,15 +230,10 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      * @dev Allows users to claim their tokens during the vesting period or after the ICO has ended.
      * @notice The claimable tokens are calculated based on the user's bought tokens, vesting period, and cliff period.
      * @notice The claimed tokens are updated for the user and the claimable tokens are transferred to the user's address.
-     * @notice No need to check if the user has been whitelisted as the claimable tokens are based on the bought tokens. 
+     * @notice No need to check if the user has been whitelisted as the claimable tokens are based on the bought tokens.
      *  Also, it avoids giving the owner the ability to ban users after they bought tokens.
      */
-    function claimTokens()
-        external
-        nonReentrant
-        whenNotPaused
-        setSaleStage
-    {
+    function claimTokens() external nonReentrant whenNotPaused setSaleStage {
         require(
             saleStage == SaleStages.VestingPeriod ||
                 saleStage == SaleStages.Ended,
@@ -249,6 +246,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         uint256 unlockedTokens = 0;
         uint256 boughtTokens = 0;
 
+        // Calculate the total bought tokens for the user. Sale must be ended and refund not active
         if (!saleOne.isRefundActive && saleOne.isEnded)
             boughtTokens += boughtTokensSaleOne[msg.sender];
         if (!saleTwo.isRefundActive && saleTwo.isEnded)
@@ -257,27 +255,39 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             boughtTokens += boughtTokensSaleThree[msg.sender];
 
         if (saleStage == SaleStages.VestingPeriod) {
+            // Calculate the number of tokens that can be claimed based on the vesting period using the ratio of the current elapsed time to the vesting period
             unlockedTokens =
-                (boughtTokens * (currentTime - saleThree.endTime - cliffPeriod)) /
+                (boughtTokens *
+                    (currentTime - saleThree.endTime - cliffPeriod)) /
                 vestingPeriod;
         } else if (saleStage == SaleStages.Ended) {
             unlockedTokens = boughtTokens;
         }
 
         if (unlockedTokens > claimedTokens[msg.sender]) {
+            // Calculate the number of tokens that can be claimed based on the bought tokens and the already claimed tokens
             claimableTokens = unlockedTokens - claimedTokens[msg.sender];
         } else {
             revert("No claimable tokens");
         }
 
         emit TokenClaimed(msg.sender, claimableTokens);
+        
         claimedTokens[msg.sender] = unlockedTokens;
 
-        token.transfer(msg.sender, claimableTokens);
+        bool result = token.transfer(msg.sender, claimableTokens);
+        require(result, "Transfer failed");
     }
 
-    function claimRefund(uint256 _saleToRefund) external nonReentrant whenNotPaused setSaleStage saleMustExist(_saleToRefund) {
-
+    function claimRefund(
+        uint256 _saleToRefund
+    )
+        external
+        nonReentrant
+        whenNotPaused
+        setSaleStage
+        saleMustExist(_saleToRefund)
+    {
         uint256 refundAmount = 0;
         if (_saleToRefund == 1) {
             require(saleOne.isRefundActive, "Refund not active");
@@ -291,7 +301,10 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             boughtTokensSaleTwo[msg.sender] = 0;
         } else if (_saleToRefund == 3) {
             require(saleThree.isRefundActive, "Refund not active");
-            require(boughtTokensSaleThree[msg.sender] > 0, "No ethers to refund");
+            require(
+                boughtTokensSaleThree[msg.sender] > 0,
+                "No ethers to refund"
+            );
             refundAmount = boughtTokensSaleThree[msg.sender] / saleThree.price;
             boughtTokensSaleThree[msg.sender] = 0;
         }
@@ -331,11 +344,10 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     function endSale(
         uint256 _saleToEnd
     ) external onlyOwner setSaleStage nonReentrant saleMustExist(_saleToEnd) {
-
         if (_saleToEnd == 1) {
             require(saleStage > SaleStages.SaleOne, "Sale One not ended yet");
             require(!saleOne.isEnded, "Sale One already ended"); // Ensure the sale has not already ended
-            saleOne.isEnded = true; 
+            saleOne.isEnded = true;
 
             if (saleOne.soldTokens < saleOne.minSoldTokens) {
                 saleOne.isRefundActive = true; // Activate refund, allowing users to claim their Ether back
@@ -424,34 +436,19 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
         if (currentTime < saleOne.startTime) {
             _saleStage = SaleStages.BeforeStart;
-        } else if (
-            currentTime >= saleOne.startTime && currentTime <= saleOne.endTime
-        ) {
+        } else if (currentTime < saleOne.endTime) {
             _saleStage = SaleStages.SaleOne;
-        } else if (
-            currentTime > saleOne.endTime && currentTime < saleTwo.startTime
-        ) {
+        } else if (currentTime < saleTwo.startTime) {
             _saleStage = SaleStages.BetweenSaleOneAndTwo;
-        } else if (
-            currentTime >= saleTwo.startTime && currentTime < saleTwo.endTime
-        ) {
+        } else if (currentTime < saleTwo.endTime) {
             _saleStage = SaleStages.SaleTwo;
-        } else if (
-            currentTime > saleTwo.endTime && currentTime < saleThree.startTime
-        ) {
+        } else if (currentTime < saleThree.startTime) {
             _saleStage = SaleStages.BetweenSaleTwoAndThree;
-        } else if (
-            currentTime >= saleThree.startTime &&
-            currentTime <= saleThree.endTime
-        ) {
+        } else if (currentTime < saleThree.endTime) {
             _saleStage = SaleStages.SaleThree;
-        } else if (
-            currentTime >= saleThree.endTime &&
-            currentTime < saleThree.endTime + cliffPeriod
-        ) {
+        } else if (currentTime < saleThree.endTime + cliffPeriod) {
             _saleStage = SaleStages.CliffPeriod;
         } else if (
-            currentTime >= saleThree.endTime + cliffPeriod &&
             currentTime < saleThree.endTime + cliffPeriod + vestingPeriod
         ) {
             _saleStage = SaleStages.VestingPeriod;
@@ -473,7 +470,10 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     }
 
     modifier saleMustExist(uint256 _saleNumber) {
-        require(_saleNumber == 1 || _saleNumber == 2 || _saleNumber == 3, "Invalid sale number");
+        require(
+            _saleNumber == 1 || _saleNumber == 2 || _saleNumber == 3,
+            "Invalid sale number"
+        );
         _;
     }
 }
