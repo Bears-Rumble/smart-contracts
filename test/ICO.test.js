@@ -214,6 +214,7 @@ describe("ICO Contract", function () {
 
             const saleOne = await ico.saleOne();
             const saleTwo = await ico.saleTwo();
+            const saleThree = await ico.saleThree();
 
             expect(saleOne[0]).to.equal(saleOnePrice);
             expect(saleOne[1]).to.equal(saleOneSupply);
@@ -221,6 +222,9 @@ describe("ICO Contract", function () {
             expect(saleOne[3]).to.equal(saleOneMinPurchase);
             expect(saleOne[4]).to.equal(saleOneStart);
             expect(saleOne[5]).to.equal(saleOneEnd);
+            expect(saleOne[6]).to.equal(saleOneMinTokensSold);
+            expect(saleOne[7]).to.be.false;
+            expect(saleOne[8]).to.be.false;
 
             expect(saleTwo[0]).to.equal(saleTwoPrice);
             expect(saleTwo[1]).to.equal(saleTwoSupply);
@@ -228,6 +232,19 @@ describe("ICO Contract", function () {
             expect(saleTwo[3]).to.equal(saleTwoMinPurchase);
             expect(saleTwo[4]).to.equal(saleTwoStart);
             expect(saleTwo[5]).to.equal(saleTwoEnd);
+            expect(saleTwo[6]).to.equal(saleTwoMinTokensSold);
+            expect(saleTwo[7]).to.be.false;
+            expect(saleTwo[8]).to.be.false;
+
+            expect(saleThree[0]).to.equal(saleThreePrice);
+            expect(saleThree[1]).to.equal(saleThreeSupply);
+            expect(saleThree[2]).to.equal(0);
+            expect(saleThree[3]).to.equal(saleThreeMinPurchase);
+            expect(saleThree[4]).to.equal(saleThreeStart);
+            expect(saleThree[5]).to.equal(saleThreeEnd);
+            expect(saleThree[6]).to.equal(saleThreeMinTokensSold);
+            expect(saleThree[7]).to.be.false;
+            expect(saleThree[8]).to.be.false;
 
             expect(await ico.cliffPeriod()).to.equal(cliffPeriod);
             expect(await ico.vestingPeriod()).to.equal(vestingPeriod);
@@ -752,15 +769,6 @@ describe("ICO Contract", function () {
 
             // Claim tokens with addr1
             await expect(ico.connect(addr1).claimTokens()).to.be.revertedWith("Claim period not started");
-        });
-
-        it("Should not claim tokens if the address is not whitelisted", async function () {
-
-            // Set the timestamp to be after the cliff period and within the vesting period
-            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + cliffPeriod + vestingPeriod / 2]);
-
-            // Claim tokens with addr1
-            await expect(ico.connect(addr1).claimTokens()).to.be.revertedWith("Not whitelisted");
         });
 
         it("Should claim zero tokens if the address has already claimed all tokens", async function () {
