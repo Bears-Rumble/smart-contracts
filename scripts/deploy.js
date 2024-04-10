@@ -3,19 +3,33 @@ const hre = require("hardhat");
 async function main() {
 
   // Set deployment parameters (DUMMY VALUES, REPLACE WITH REAL VALUES)
-  const saleOnePrice = 1000;
-  const saleTwoPrice = 2000;
-  const saleOneSupply = 100_000_000n * 10n ** 18n;
-  const saleTwoSupply = 200_000_000n * 10n ** 18n;
+  const saleOnePrice = 130_000; // Price in Tokens per Ether
+  const saleOneSupply = 40_000_000n * 10n ** 18n;
+  const saleOneMinPurchase = 20_000n * 10n ** 18n; // About 500 USD  
   const saleOneStart = Math.round(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days from now
-  const saleOneEnd = saleOneStart + 60 * 60 * 24 * 7; // 7 days
-  const saleTwoStart = saleOneEnd + 60 * 60 * 24 * 7; // 7 days after SaleOne ends
-  const saleTwoEnd = saleTwoStart + 60 * 60 * 24 * 7; // 7 days
-  const cliffPeriod = 60 * 60 * 24 * 30; // 30 days
-  const vestingPeriod = 60 * 60 * 24 * 180; // 180 days
+  const saleOneEnd = saleOneStart + 60 * 60 * 24 * 30; // 30 days
+  const saleOneMinTokensSold = 140_000n * 10n ** 18n;
 
-  const saleOne = [saleOnePrice, saleOneSupply, 0, saleOneMinPurchase, saleOneStart, saleOneEnd];
-  const saleTwo = [saleTwoPrice, saleTwoSupply, 0, saleTwoMinPurchase, saleTwoStart, saleTwoEnd];
+  const saleTwoPrice = 60_000; // Price in Tokens per Ether
+  const saleTwoSupply = 50_000_000n * 10n ** 18n;
+  const saleTwoMinPurchase = 15_000n * 10n ** 18n; // About 200 USD
+  const saleTwoStart = saleOneEnd + 60 * 60 * 24 * 60; // 60 days after SaleOne ends
+  const saleTwoEnd = saleTwoStart + 60 * 60 * 24 * 30; // 30 days
+  const saleTwoMinTokensSold = 70_000n * 10n ** 18n;
+
+  const saleThreePrice = 30_000; // Price in Tokens per Ether
+  const saleThreeSupply = 60_000_000n * 10n ** 18n;
+  const saleThreeMinPurchase = 10_000n * 10n ** 18n;
+  const saleThreeStart = saleTwoEnd + 60 * 60 * 24 * 60; // 30 days after SaleTwo ends
+  const saleThreeEnd = saleThreeStart + 60 * 60 * 24 * 30; // 30 days
+  const saleThreeMinTokensSold = 10_000_000n * 10n ** 18n;
+
+  const cliffPeriod = 60 * 60 * 24 * 30; // 30 days
+  const vestingPeriod = 60 * 60 * 24 * 300; // 300 days
+
+  const saleTwo = [saleTwoPrice, saleTwoSupply, 0, saleTwoMinPurchase, saleTwoStart, saleTwoEnd, saleTwoMinTokensSold, false, false];
+  const saleOne = [saleOnePrice, saleOneSupply, 0, saleOneMinPurchase, saleOneStart, saleOneEnd, saleOneMinTokensSold, false, false];
+  const saleThree = [saleThreePrice, saleThreeSupply, 0, saleThreeMinPurchase, saleThreeStart, saleThreeEnd, saleThreeMinTokensSold, false, false];
 
   // Deploy contracts
   let deployer;
@@ -40,6 +54,7 @@ async function main() {
     bearRumbleToken.target,
     saleOne,
     saleTwo,
+    saleThree,
     cliffPeriod,
     vestingPeriod
   );
@@ -49,7 +64,7 @@ async function main() {
   console.log("BearRumbleICO deployed to:", bearRumbleICO.target);
 
   // Transfer tokens to ICO contract
-  await bearRumbleToken.transfer(bearRumbleICO.target, saleOneSupply + saleTwoSupply);
+  await bearRumbleToken.transfer(bearRumbleICO.target, saleOneSupply + saleTwoSupply + saleThreeSupply);
 
 }
 
