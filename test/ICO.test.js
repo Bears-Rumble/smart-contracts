@@ -210,7 +210,7 @@ describe("ICO Contract", function () {
 
     describe("Deployment", function () {
         it("Should set the correct parameters", async function () {
-            expect(await ico.token).to.equal(bearRumble.address);
+            expect(await ico.token()).to.equal(bearRumble.target);
 
             const saleOne = await ico.saleOne();
             const saleTwo = await ico.saleTwo();
@@ -913,8 +913,6 @@ describe("ICO Contract", function () {
         it("Should simulate the complete ICO process", async function () {
             const paidEtherInSales = await simulateCompleteICO();
             const ownerETHBalance = await ethers.provider.getBalance(owner.address);
-            console.log("Owner ETH balance: ", ownerETHBalance.toString());
-            console.log("Paid Ether in sales: ", paidEtherInSales.toString());
         });
     });
 });
