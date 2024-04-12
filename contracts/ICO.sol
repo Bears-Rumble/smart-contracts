@@ -8,8 +8,9 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import {BearRumble} from "./BearRumble.sol";
 
 /**
- * @title  ICO Contract
- * @author IARD Solutions: https://iard.solutions - Web3 Experts suited to your needs
+ * @title  Bear Rumble ICO Contract
+ * @author IARD Solutions: https://iard.solutions - Web3 Experts suited to your needs. Web3 | Consulting | Innovations
+ * @author Bear Rumble: 
  * @notice This contract is used to manage the ICO of the BearRumble token
  *         The ICO has three sales, a cliff period and a vesting period
  *         The owner can manage the whitelist, end the sale and burn the unsold tokens
@@ -17,7 +18,7 @@ import {BearRumble} from "./BearRumble.sol";
  *         If a sale ends and the minimum tokens are not sold, the buyers can claim a refund
  *
  * Important notes:
- * - The Sold ERC20 token total sold amound must be sent to the contract address before any purchase
+ * - The Sold ERC20 token total supply must be sent to this contract address before the first sale starts
  *
  *  BearRumble is a Play2Earn & Free2Play multiplayer Web3 Game
  *  Socials:
