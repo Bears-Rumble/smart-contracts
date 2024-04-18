@@ -11,7 +11,7 @@ import {BearRumble} from "./BearRumble.sol";
 /**
  * @title  Bear Rumble ICO Contract
  * @author IARD Solutions: https://iard.solutions - Web3 Experts suited to your needs. Web3 | Consulting | Innovations
- * @author Bear Rumble: 
+ * @author Bear Rumble:
  * @notice This contract is used to manage the ICO of the BearRumble token
  *         The ICO has three sales, a cliff period and a vesting period
  *         The owner can manage the whitelist, end the sale and burn the unsold tokens
@@ -30,7 +30,6 @@ import {BearRumble} from "./BearRumble.sol";
  */
 
 contract ICO is Ownable, ReentrancyGuard, Pausable {
-
     /**
      * @notice Sale details
      * @param price Price of the token in tokens per Ether
@@ -274,7 +273,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         }
 
         emit TokenClaimed(msg.sender, claimableTokens);
-        
+
         claimedTokens[msg.sender] = unlockedTokens;
 
         bool result = token.transfer(msg.sender, claimableTokens);
