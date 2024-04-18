@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import {BearRumble} from "./BearRumble.sol";
 
@@ -310,7 +311,8 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             boughtTokensSaleThree[msg.sender] = 0;
         }
         emit RefundClaimed(msg.sender, refundAmount);
-        payable(msg.sender).transfer(refundAmount);
+
+        Address.sendValue(payable(msg.sender), refundAmount);
     }
 
     /************************************ Owner functions ************************************/
@@ -355,7 +357,8 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 saleOne.soldTokens = 0; // Reset sold tokens to 0 as all tokens will be refunded, every token will be burned
             } else {
                 uint256 saleOneReceivedETH = saleOne.soldTokens / saleOne.price; // Calculate the amount of Ether received from the sale
-                payable(owner()).transfer(saleOneReceivedETH); // Transfer the received Ether to the owner
+                
+                Address.sendValue(payable(owner()), saleOneReceivedETH); // Transfer the received Ether to the owner
             }
         } else if (_saleToEnd == 2) {
             require(saleStage > SaleStages.SaleTwo, "Sale Two not ended yet");
