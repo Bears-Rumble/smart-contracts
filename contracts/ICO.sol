@@ -358,7 +358,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 payable(owner()).transfer(saleOneReceivedETH); // Transfer the received Ether to the owner
             }
         } else if (_saleToEnd == 2) {
-            require(saleStage > SaleStages.SaleTwo, "Sale One not ended yet");
+            require(saleStage > SaleStages.SaleTwo, "Sale Two not ended yet");
             require(!saleTwo.isEnded, "Sale Two already ended");
             saleTwo.isEnded = true;
 
