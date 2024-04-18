@@ -391,6 +391,22 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         emit SaleEnded(_saleToEnd);
     }
 
+    /**
+     * @dev Pauses the contract.
+     * Only the contract owner can call this function.
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpauses the contract.
+     * Only the contract owner can call this function.
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     /************************************ Internal functions ************************************/
 
     /**
