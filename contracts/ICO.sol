@@ -179,7 +179,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         }
 
         // Check if the buyer has sent enough Ether to purchase the tokens
-        require(msg.value == _amount / price, "Wrong amount of Ether sent");
+        require(msg.value * price == _amount, "Wrong amount of Ether sent");
 
         // Check if the amount is greater than the minimum purchase
         if (saleStage == SaleStages.SaleOne) {
