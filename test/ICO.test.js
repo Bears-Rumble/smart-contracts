@@ -5,21 +5,21 @@ describe("ICO Contract", function () {
     let ICO, BearRumble, ico, bearRumble, owner, addr1, addr2, addr3, addr4;
 
     // Set deployment parameters
-    const saleOnePrice = 130_000; // Price in Tokens per Ether
+    const saleOnePrice = 100_000; // Price in Tokens per Ether
     const saleOneSupply = 40_000_000n * 10n ** 18n;
     const saleOneMinPurchase = 20_000n * 10n ** 18n; // About 500 USD  
     const saleOneStart = Math.round(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days from now
     const saleOneEnd = saleOneStart + 60 * 60 * 24 * 30; // 30 days
     const saleOneMinTokensSold = 140_000n * 10n ** 18n;
 
-    const saleTwoPrice = 60_000; // Price in Tokens per Ether
+    const saleTwoPrice = 50_000; // Price in Tokens per Ether
     const saleTwoSupply = 50_000_000n * 10n ** 18n;
     const saleTwoMinPurchase = 15_000n * 10n ** 18n; // About 200 USD
     const saleTwoStart = saleOneEnd + 60 * 60 * 24 * 60; // 60 days after SaleOne ends
     const saleTwoEnd = saleTwoStart + 60 * 60 * 24 * 30; // 30 days
     const saleTwoMinTokensSold = 70_000n * 10n ** 18n;
 
-    const saleThreePrice = 30_000; // Price in Tokens per Ether
+    const saleThreePrice = 50_000; // Price in Tokens per Ether
     const saleThreeSupply = 60_000_000n * 10n ** 18n;
     const saleThreeMinPurchase = 10_000n * 10n ** 18n;
     const saleThreeStart = saleTwoEnd + 60 * 60 * 24 * 60; // 30 days after SaleTwo ends
@@ -386,7 +386,8 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount1 = saleOneSupply;
-            await ico.connect(addr1).buyTokens(tokenAmount1, { value: tokenAmount1 / BigInt(saleOnePrice) });
+            const etherAmount1 = tokenAmount1 / BigInt(saleOnePrice);
+            await ico.connect(addr1).buyTokens(tokenAmount1, { value: etherAmount1 });
 
             // Check if the tokens were bought correctly
             expect(await ico.boughtTokensSaleOne(addr1.address)).to.equal(tokenAmount1);
@@ -444,7 +445,7 @@ describe("ICO Contract", function () {
             await ico.manageWhitelist([addr1.address], [true]);
 
             // Buy tokens with addr1
-            const tokenAmount = saleOneSupply + 1n;
+            const tokenAmount = saleOneSupply + BigInt(saleOnePrice);
             await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) }))
                 .to.be.revertedWith("Insufficient remaining tokens supply");
 
@@ -452,8 +453,16 @@ describe("ICO Contract", function () {
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart]);
 
             // Buy tokens with addr1
-            const tokenAmount2 = saleTwoSupply + 1n;
+            const tokenAmount2 = saleTwoSupply + BigInt(saleOnePrice);
             await expect(ico.connect(addr1).buyTokens(tokenAmount2, { value: tokenAmount2 / BigInt(saleTwoPrice) }))
+                .to.be.revertedWith("Insufficient remaining tokens supply");
+
+            // Set the timestamp to be within SaleThree
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeStart]);
+
+            // Buy tokens with addr1
+            const tokenAmount3 = saleThreeSupply + BigInt(saleOnePrice);
+            await expect(ico.connect(addr1).buyTokens(tokenAmount3, { value: tokenAmount3 / BigInt(saleThreePrice) }))
                 .to.be.revertedWith("Insufficient remaining tokens supply");
         });
 
@@ -483,7 +492,7 @@ describe("ICO Contract", function () {
             await ico.manageWhitelist([addr1.address], [true]);
 
             // Buy tokens with addr1
-            const tokenAmount = saleOneMinPurchase - 1n;
+            const tokenAmount = saleOneMinPurchase / 10n;
             await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) }))
                 .to.be.revertedWith("Amount less than minimum purchase");
 
@@ -491,8 +500,16 @@ describe("ICO Contract", function () {
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart]);
 
             // Buy tokens with addr1
-            const tokenAmount2 = saleTwoMinPurchase - 1n;
+            const tokenAmount2 = saleTwoMinPurchase / 10n;
             await expect(ico.connect(addr1).buyTokens(tokenAmount2, { value: tokenAmount2 / BigInt(saleTwoPrice) }))
+                .to.be.revertedWith("Amount less than minimum purchase");
+
+            // Set the timestamp to be within SaleThree
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeStart]);
+
+            // Buy tokens with addr1
+            const tokenAmount3 = saleThreeMinPurchase / 10n;
+            await expect(ico.connect(addr1).buyTokens(tokenAmount3, { value: tokenAmount3 / BigInt(saleThreePrice) }))
                 .to.be.revertedWith("Amount less than minimum purchase");
         });
     });
@@ -651,7 +668,7 @@ describe("ICO Contract", function () {
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart + 60 * 60 * 24 * 1]);
 
             // End SaleTwo
-            await expect(ico.endSale(2)).to.be.revertedWith("Sale One not ended yet");
+            await expect(ico.endSale(2)).to.be.revertedWith("Sale Two not ended yet");
 
             // Set the timestamp to be during SaleThree
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeStart + 60 * 60 * 24 * 1]);
@@ -913,6 +930,32 @@ describe("ICO Contract", function () {
         it("Should simulate the complete ICO process", async function () {
             const paidEtherInSales = await simulateCompleteICO();
             const ownerETHBalance = await ethers.provider.getBalance(owner.address);
+        });
+    });
+
+    describe("Pause and Unpause", function () {
+        it("Should pause and unpause the contract", async function () {
+            // Pause the contract
+            await ico.pause();
+
+            // Check if the contract is paused
+            expect(await ico.paused()).to.be.true;
+
+            // Unpause the contract
+            await ico.unpause();
+
+            // Check if the contract is unpaused
+            expect(await ico.paused()).to.be.false;
+        });
+
+        it("Should not pause and unpause the contract if not the owner", async function () {
+            // Pause the contract
+            await expect(ico.connect(addr1).pause())
+                .to.be.revertedWithCustomError(ico, "OwnableUnauthorizedAccount");
+
+            // Unpause the contract
+            await expect(ico.connect(addr1).unpause())
+                .to.be.revertedWithCustomError(ico, "OwnableUnauthorizedAccount");
         });
     });
 });
