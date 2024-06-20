@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import {BearRumble} from "./BearRumble.sol";
+import {BearsRumble} from "./BearRumble.sol";
 
 /**
  * @title  Bear Rumble ICO Contract
@@ -76,7 +76,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         Ended
     }
 
-    BearRumble public immutable token;
+    BearsRumble public immutable token;
 
     SaleStages public saleStage;
 
@@ -119,7 +119,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         uint256 _cliffPeriod,
         uint256 _vestingPeriod
     ) Ownable(msg.sender) {
-        token = BearRumble(_token);
+        token = BearsRumble(_token);
 
         saleOne.price = _saleOne.price;
         saleOne.tokenSupply = _saleOne.tokenSupply;
