@@ -42,16 +42,16 @@ async function main() {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  const BearRumbleToken = await hre.ethers.getContractFactory("BearRumble");
-  const bearRumbleToken = await BearRumbleToken.deploy();
+  const BearsRumbleToken = await hre.ethers.getContractFactory("BearsRumble");
+  const bearsRumbleToken = await BearsRumbleToken.deploy();
 
-  await bearRumbleToken.waitForDeployment();
+  await bearsRumbleToken.waitForDeployment();
 
-  console.log("BearRumbleToken deployed to:", bearRumbleToken.target);
+  console.log("BearsRumbleToken deployed to:", bearsRumbleToken.target);
 
-  const BearRumbleICO = await hre.ethers.getContractFactory("ICO");
-  const bearRumbleICO = await BearRumbleICO.deploy(
-    bearRumbleToken.target,
+  const BearsRumbleICO = await hre.ethers.getContractFactory("ICO");
+  const bearsRumbleICO = await BearsRumbleICO.deploy(
+    bearsRumbleToken.target,
     saleOne,
     saleTwo,
     saleThree,
@@ -59,12 +59,12 @@ async function main() {
     vestingPeriod
   );
 
-  await bearRumbleICO.waitForDeployment();
+  await bearsRumbleICO.waitForDeployment();
 
-  console.log("BearRumbleICO deployed to:", bearRumbleICO.target);
+  console.log("BearsRumbleICO deployed to:", bearsRumbleICO.target);
 
   // Transfer tokens to ICO contract
-  await bearRumbleToken.transfer(bearRumbleICO.target, saleOneSupply + saleTwoSupply + saleThreeSupply);
+  await bearsRumbleToken.transfer(bearsRumbleICO.target, saleOneSupply + saleTwoSupply + saleThreeSupply);
 
 }
 

@@ -1,10 +1,10 @@
-# Bear Rumble 
+# Bears Rumble 
 
-This repository contains the BearRumble Token and BearRumble ICO Smart Contracts.
+This repository contains the BearsRumble Token and BearsRumble ICO Smart Contracts.
 
 ## Installation
 
-To install and use the Bear Rumble project, follow these steps:
+To install and use the Bears Rumble project, follow these steps:
 
 1. Clone the repository
 
