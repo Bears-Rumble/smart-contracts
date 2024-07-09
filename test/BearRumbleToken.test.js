@@ -1,23 +1,23 @@
 const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
-describe("BearRumbleToken", function() {
+describe("BearsRumbleToken", function() {
 
-    let BearRumbleToken, bearRumbleToken, owner, addr1, addr2;
+    let BearsRumbleToken, bearsRumbleToken, owner, addr1, addr2;
 
     beforeEach(async function() {
-        BearRumbleToken = await ethers.getContractFactory("BearRumble");
+        BearsRumbleToken = await ethers.getContractFactory("BearsRumble");
         [owner, addr1, addr2] = await ethers.getSigners();
-        bearRumbleToken = await BearRumbleToken.deploy();
+        bearsRumbleToken = await BearsRumbleToken.deploy();
     });
 
     describe("Deployment", function() {
         it("Should set the parameters", async function() {
-            expect(await bearRumbleToken.name()).to.equal("BearRumble");
-            expect(await bearRumbleToken.symbol()).to.equal("BR");
-            expect(await bearRumbleToken.balanceOf(owner.address))
+            expect(await bearsRumbleToken.name()).to.equal("BearsRumble");
+            expect(await bearsRumbleToken.symbol()).to.equal("BR");
+            expect(await bearsRumbleToken.balanceOf(owner.address))
                 .to.equal(1_000_000_000n * 10n ** 18n);
-            expect(await bearRumbleToken.totalSupply())
+            expect(await bearsRumbleToken.totalSupply())
                 .to.equal(1_000_000_000n * 10n ** 18n);
         });
         

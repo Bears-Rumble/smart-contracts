@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
 describe("ICO Contract", function () {
-    let ICO, BearRumble, ico, bearRumble, owner, addr1, addr2, addr3, addr4;
+    let ICO, BearsRumble, ico, bearsRumble, owner, addr1, addr2, addr3, addr4;
 
     // Set deployment parameters
     const saleOnePrice = 100_000; // Price in Tokens per Ether
@@ -39,12 +39,12 @@ describe("ICO Contract", function () {
 
         // Deploy contracts
         ICO = await ethers.getContractFactory("ICO");
-        BearRumble = await ethers.getContractFactory("BearRumble");
+        BearsRumble = await ethers.getContractFactory("BearsRumble");
 
-        bearRumble = await BearRumble.deploy();
-        await bearRumble.waitForDeployment();
+        bearsRumble = await BearsRumble.deploy();
+        await bearsRumble.waitForDeployment();
 
-        ico = await ICO.deploy(bearRumble.target,
+        ico = await ICO.deploy(bearsRumble.target,
             saleOne,
             saleTwo,
             saleThree,
@@ -56,7 +56,7 @@ describe("ICO Contract", function () {
         [owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
         // Transfer tokens to the ICO contract
-        await bearRumble.transfer(ico.target, saleOneSupply + saleTwoSupply + saleThreeSupply);
+        await bearsRumble.transfer(ico.target, saleOneSupply + saleTwoSupply + saleThreeSupply);
     });
 
     /**
@@ -210,7 +210,7 @@ describe("ICO Contract", function () {
 
     describe("Deployment", function () {
         it("Should set the correct parameters", async function () {
-            expect(await ico.token()).to.equal(bearRumble.target);
+            expect(await ico.token()).to.equal(bearsRumble.target);
 
             const saleOne = await ico.saleOne();
             const saleTwo = await ico.saleTwo();
@@ -523,14 +523,14 @@ describe("ICO Contract", function () {
 
             const saleOneBeforeEnd = await ico.saleOne();
             const contractBalanceBefore = await ethers.provider.getBalance(ico.target);
-            const contractTokenBalanceBefore = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceBefore = await bearsRumble.balanceOf(ico.target);
             // End SaleOne
             await ico.endSale(1);
 
             const saleOneAfterEnd = await ico.saleOne();
             const contractBalanceAfter = await ethers.provider.getBalance(ico.target);
             const unsoldTokens = saleOneBeforeEnd[1] - saleOneBeforeEnd[2];
-            const contractTokenBalanceAfter = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceAfter = await bearsRumble.balanceOf(ico.target);
 
             expect(saleOneAfterEnd[2]).to.equal(saleOneBeforeEnd[2]);
             expect(saleOneAfterEnd[7]).to.be.false;
@@ -548,14 +548,14 @@ describe("ICO Contract", function () {
 
             const saleTwoBeforeEnd = await ico.saleTwo();
             const contractBalanceBefore = await ethers.provider.getBalance(ico.target);
-            const contractTokenBalanceBefore = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceBefore = await bearsRumble.balanceOf(ico.target);
             // End SaleTwo
             await ico.endSale(2);
 
             const saleTwoAfterEnd = await ico.saleTwo();
             const contractBalanceAfter = await ethers.provider.getBalance(ico.target);
             const unsoldTokens = saleTwoBeforeEnd[1] - saleTwoBeforeEnd[2];
-            const contractTokenBalanceAfter = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceAfter = await bearsRumble.balanceOf(ico.target);
 
             expect(saleTwoAfterEnd[2]).to.equal(saleTwoBeforeEnd[2]);
             expect(saleTwoAfterEnd[7]).to.be.false;
@@ -572,14 +572,14 @@ describe("ICO Contract", function () {
 
             const saleThreeBeforeEnd = await ico.saleThree();
             const contractBalanceBefore = await ethers.provider.getBalance(ico.target);
-            const contractTokenBalanceBefore = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceBefore = await bearsRumble.balanceOf(ico.target);
             // End SaleThree
             await ico.endSale(3);
 
             const saleThreeAfterEnd = await ico.saleThree();
             const contractBalanceAfter = await ethers.provider.getBalance(ico.target);
             const unsoldTokens = saleThreeBeforeEnd[1] - saleThreeBeforeEnd[2];
-            const contractTokenBalanceAfter = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceAfter = await bearsRumble.balanceOf(ico.target);
 
             expect(saleThreeAfterEnd[2]).to.equal(saleThreeBeforeEnd[2]);
             expect(saleThreeAfterEnd[7]).to.be.false;
@@ -592,13 +592,13 @@ describe("ICO Contract", function () {
             // Set the timestamp to be after SaleOne
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneEnd + 60 * 60 * 24 * 1]);
 
-            const contractTokenBalanceBefore = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceBefore = await bearsRumble.balanceOf(ico.target);
 
             // End SaleOne
             await ico.endSale(1);
 
             const saleOne = await ico.saleOne();
-            const contractTokenBalanceAfter = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceAfter = await bearsRumble.balanceOf(ico.target);
 
             expect(saleOne[7]).to.be.true;
             expect(saleOne[8]).to.be.true;
@@ -610,13 +610,13 @@ describe("ICO Contract", function () {
             // Set the timestamp to be after SaleTwo
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + 60 * 60 * 24 * 1]);
 
-            const contractTokenBalanceBefore = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceBefore = await bearsRumble.balanceOf(ico.target);
 
             // End SaleTwo
             await ico.endSale(2);
 
             const saleTwo = await ico.saleTwo();
-            const contractTokenBalanceAfter = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceAfter = await bearsRumble.balanceOf(ico.target);
 
             expect(saleTwo[7]).to.be.true;
             expect(saleTwo[8]).to.be.true;
@@ -628,13 +628,13 @@ describe("ICO Contract", function () {
             // Set the timestamp to be after SaleThree
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + 60 * 60 * 24 * 1]);
 
-            const contractTokenBalanceBefore = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceBefore = await bearsRumble.balanceOf(ico.target);
 
             // End SaleThree
             await ico.endSale(3);
 
             const saleThree = await ico.saleThree();
-            const contractTokenBalanceAfter = await bearRumble.balanceOf(ico.target);
+            const contractTokenBalanceAfter = await bearsRumble.balanceOf(ico.target);
 
             expect(saleThree[7]).to.be.true;
             expect(saleThree[8]).to.be.true;
@@ -732,9 +732,9 @@ describe("ICO Contract", function () {
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + cliffPeriod + vestingPeriod / 2]);
 
             // Claim tokens with addr1
-            const initialBalance = await bearRumble.balanceOf(addr1.address);
+            const initialBalance = await bearsRumble.balanceOf(addr1.address);
             await ico.connect(addr1).claimTokens();
-            const finalBalance = await bearRumble.balanceOf(addr1.address);
+            const finalBalance = await bearsRumble.balanceOf(addr1.address);
             const claimedTokens = await ico.claimedTokens(addr1.address);
             const totalBoughtTokens = tokenAmountSaleOne + tokenAmountSaleTwo + tokenAmountSaleThree;
             // Check if the tokens were claimed correctly
@@ -760,9 +760,9 @@ describe("ICO Contract", function () {
             await ico.endSale(2);
 
             // Claim tokens with addr1
-            const initialBalance = await bearRumble.balanceOf(addr1.address);
+            const initialBalance = await bearsRumble.balanceOf(addr1.address);
             await ico.connect(addr1).claimTokens();
-            const finalBalance = await bearRumble.balanceOf(addr1.address);
+            const finalBalance = await bearsRumble.balanceOf(addr1.address);
             const claimedTokens = await ico.claimedTokens(addr1.address);
 
             // Check if the tokens were claimed correctly
