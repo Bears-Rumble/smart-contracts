@@ -20,6 +20,7 @@ import {BearsRumble} from "./BearRumble.sol";
  *
  * Important notes:
  * - The Sold ERC20 token total supply must be sent to this contract address before the first sale starts
+ * - As the ICO include a referral system that can give up to 2% of the bought tokens, these tokens must also be sent to this contract address before the first sale starts
  *
  *  BearsRumble is a Play2Earn & Free2Play multiplayer Web3 Game
  *  Socials:
@@ -101,6 +102,9 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     mapping(address => uint256) public boughtTokensSaleTwo;
     mapping(address => uint256) public boughtTokensSaleThree;
 
+    mapping(address => uint256) public referralTokens;
+    uint256 public totalReferralTokens;
+
     mapping(address => uint256) public claimedTokens;
 
     // Events
@@ -162,9 +166,11 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     /**
      * @notice Buy tokens from the ICO
      * @param _amount Amount of tokens to buy in the smallest unit of the token
+     * @param _referralAddress Address of the referral, 0x0 or msg.sender equals no referral
      */
     function buyTokens(
-        uint256 _amount
+        uint256 _amount,
+        address _referralAddress
     ) external payable onlyWhiteListed nonReentrant whenNotPaused setSaleStage {
         // Calculate the token price based on the current sale stage
         uint256 price = 0;
@@ -223,6 +229,29 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             boughtTokensSaleThree[msg.sender] += _amount;
         }
 
+        // Referral system
+        // 0,32% of the bought tokens will be distributed to the referral address and the buyer
+        // Requires the referral address to be whitelisted and to have bought tokens in any sale
+        if (_referralAddress != address(0) && _referralAddress != msg.sender) {
+            require(whitelist[_referralAddress], "Referral not whitelisted");
+            uint256 referralBoughtTokens = boughtTokensSaleOne[
+                _referralAddress
+            ] +
+                boughtTokensSaleTwo[_referralAddress] +
+                boughtTokensSaleThree[_referralAddress];
+            require(referralBoughtTokens > 0, "Referral has not bought tokens");
+
+            uint256 referralAmount = _amount / 625; // 0,16% of the bought tokens
+            referralTokens[_referralAddress] += referralAmount;
+            referralTokens[msg.sender] += referralAmount;
+            totalReferralTokens += 2 * referralAmount;
+
+            emit TokenPurchased(_referralAddress, referralAmount, price);
+        } else {
+            uint256 referralAmount = _amount / 625; // 0,16% of the bought tokens
+            referralTokens[owner()] += 2 * referralAmount;
+        }
+
         // Emit the TokenPurchased event
         emit TokenPurchased(msg.sender, _amount, price);
     }
@@ -246,6 +275,12 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         uint256 claimableTokens = 0;
         uint256 unlockedTokens = 0;
         uint256 boughtTokens = 0;
+
+        //Add referral tokens to the bought tokens if it was not done yet
+        if (referralTokens[msg.sender] > 0) {
+            boughtTokens += referralTokens[msg.sender];
+            referralTokens[msg.sender] = 0;
+        }
 
         // Calculate the total bought tokens for the user. Sale must be ended and refund not active
         if (!saleOne.isRefundActive && saleOne.isEnded)
@@ -356,7 +391,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 saleOne.soldTokens = 0; // Reset sold tokens to 0 as all tokens will be refunded, every token will be burned
             } else {
                 uint256 saleOneReceivedETH = saleOne.soldTokens / saleOne.price; // Calculate the amount of Ether received from the sale
-                
+
                 Address.sendValue(payable(owner()), saleOneReceivedETH); // Transfer the received Ether to the owner
             }
         } else if (_saleToEnd == 2) {

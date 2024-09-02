@@ -3,6 +3,7 @@ const { expect } = require("chai");
 
 describe("ICO Contract", function () {
     let ICO, BearsRumble, ico, bearsRumble, owner, addr1, addr2, addr3, addr4;
+    const zeroAddress = ethers.ZeroAddress;
 
     // Set deployment parameters
     const saleOnePrice = 100_000; // Price in Tokens per Ether
@@ -32,6 +33,7 @@ describe("ICO Contract", function () {
     const saleTwo = [saleTwoPrice, saleTwoSupply, 0, saleTwoMinPurchase, saleTwoStart, saleTwoEnd, saleTwoMinTokensSold, false, false];
     const saleOne = [saleOnePrice, saleOneSupply, 0, saleOneMinPurchase, saleOneStart, saleOneEnd, saleOneMinTokensSold, false, false];
     const saleThree = [saleThreePrice, saleThreeSupply, 0, saleThreeMinPurchase, saleThreeStart, saleThreeEnd, saleThreeMinTokensSold, false, false];
+    const referralSupply = (saleOneSupply + saleTwoSupply + saleThreeSupply) * 2n / 100n;
 
     beforeEach(async function () {
         // Reset the hardhat network
@@ -56,7 +58,7 @@ describe("ICO Contract", function () {
         [owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
         // Transfer tokens to the ICO contract
-        await bearsRumble.transfer(ico.target, saleOneSupply + saleTwoSupply + saleThreeSupply);
+        await bearsRumble.transfer(ico.target, saleOneSupply + saleTwoSupply + saleThreeSupply + referralSupply);
     });
 
     /**
@@ -79,10 +81,10 @@ describe("ICO Contract", function () {
         // Buy tokens with addr1 to addr4
         const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
         const paidEthers1 = tokenAmount / BigInt(saleOnePrice);
-        await ico.connect(addr1).buyTokens(tokenAmount, { value: paidEthers1 });
-        await ico.connect(addr2).buyTokens(tokenAmount * 2n, { value: 2n * paidEthers1 });
-        await ico.connect(addr3).buyTokens(tokenAmount * 5n, { value: 5n * paidEthers1 });
-        await ico.connect(addr4).buyTokens(tokenAmount * 10n, { value: 10n * paidEthers1 });
+        await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: paidEthers1 });
+        await ico.connect(addr2).buyTokens(tokenAmount * 2n, zeroAddress, { value: 2n * paidEthers1 });
+        await ico.connect(addr3).buyTokens(tokenAmount * 5n, zeroAddress, { value: 5n * paidEthers1 });
+        await ico.connect(addr4).buyTokens(tokenAmount * 10n, zeroAddress, { value: 10n * paidEthers1 });
 
         // Set the timestamp to be between SaleOne and SaleTwo
         await ethers.provider.send("evm_setNextBlockTimestamp", [(saleOneEnd + saleTwoStart) / 2]);
@@ -96,10 +98,10 @@ describe("ICO Contract", function () {
         // Buy tokens with addr1 to addr4
         const tokenAmount2 = ethers.parseEther((saleTwoPrice * 10).toString());
         const paidEthers2 = tokenAmount2 / BigInt(saleTwoPrice);
-        await ico.connect(addr1).buyTokens(tokenAmount2, { value: paidEthers2 });
-        await ico.connect(addr2).buyTokens(tokenAmount2, { value: paidEthers2 });
-        await ico.connect(addr3).buyTokens(tokenAmount2, { value: paidEthers2 });
-        await ico.connect(addr4).buyTokens(tokenAmount2, { value: paidEthers2 });
+        await ico.connect(addr1).buyTokens(tokenAmount2, zeroAddress, { value: paidEthers2 });
+        await ico.connect(addr2).buyTokens(tokenAmount2, zeroAddress, { value: paidEthers2 });
+        await ico.connect(addr3).buyTokens(tokenAmount2, zeroAddress, { value: paidEthers2 });
+        await ico.connect(addr4).buyTokens(tokenAmount2, zeroAddress, { value: paidEthers2 });
 
         await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + 60 * 60 * 24 * 1]);
 
@@ -112,10 +114,10 @@ describe("ICO Contract", function () {
         // Buy tokens with addr1 to addr4
         const tokenAmount3 = ethers.parseEther((saleThreePrice * 10).toString());
         const paidEthers3 = tokenAmount3 / BigInt(saleThreePrice);
-        await ico.connect(addr1).buyTokens(tokenAmount3, { value: paidEthers3 });
-        await ico.connect(addr2).buyTokens(tokenAmount3, { value: paidEthers3 });
-        await ico.connect(addr3).buyTokens(tokenAmount3, { value: paidEthers3 });
-        await ico.connect(addr4).buyTokens(tokenAmount3 * 30n, { value: paidEthers3 * 30n });
+        await ico.connect(addr1).buyTokens(tokenAmount3, zeroAddress, { value: paidEthers3 });
+        await ico.connect(addr2).buyTokens(tokenAmount3, zeroAddress, { value: paidEthers3 });
+        await ico.connect(addr3).buyTokens(tokenAmount3, zeroAddress, { value: paidEthers3 });
+        await ico.connect(addr4).buyTokens(tokenAmount3 * 30n, zeroAddress, { value: paidEthers3 * 30n });
 
         await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + 60 * 60 * 24 * 1]);
 
@@ -164,10 +166,10 @@ describe("ICO Contract", function () {
         // Buy tokens with addr1 to addr4
         const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
         const ethersAmount = tokenAmount / BigInt(saleOnePrice);
-        await ico.connect(addr1).buyTokens(tokenAmount, { value: ethersAmount });
-        await ico.connect(addr2).buyTokens(tokenAmount * 2n, { value: 2n * ethersAmount });
-        await ico.connect(addr3).buyTokens(tokenAmount * 5n, { value: 5n * ethersAmount });
-        await ico.connect(addr4).buyTokens(tokenAmount * 10n, { value: 10n * ethersAmount });
+        await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: ethersAmount });
+        await ico.connect(addr2).buyTokens(tokenAmount * 2n, zeroAddress, { value: 2n * ethersAmount });
+        await ico.connect(addr3).buyTokens(tokenAmount * 5n, zeroAddress, { value: 5n * ethersAmount });
+        await ico.connect(addr4).buyTokens(tokenAmount * 10n, zeroAddress, { value: 10n * ethersAmount });
 
         return ethersAmount * 18n;
     }
@@ -182,10 +184,10 @@ describe("ICO Contract", function () {
         // Buy tokens with addr1 to addr4
         const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
         const ethersAmount = tokenAmount / BigInt(saleTwoPrice);
-        await ico.connect(addr1).buyTokens(tokenAmount, { value: ethersAmount });
-        await ico.connect(addr2).buyTokens(tokenAmount * 2n, { value: 2n * ethersAmount });
-        await ico.connect(addr3).buyTokens(tokenAmount * 5n, { value: 5n * ethersAmount });
-        await ico.connect(addr4).buyTokens(tokenAmount * 10n, { value: 10n * ethersAmount });
+        await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: ethersAmount });
+        await ico.connect(addr2).buyTokens(tokenAmount * 2n, zeroAddress, { value: 2n * ethersAmount });
+        await ico.connect(addr3).buyTokens(tokenAmount * 5n, zeroAddress, { value: 5n * ethersAmount });
+        await ico.connect(addr4).buyTokens(tokenAmount * 10n, zeroAddress, { value: 10n * ethersAmount });
 
         return ethersAmount * 18n;
     }
@@ -200,10 +202,10 @@ describe("ICO Contract", function () {
         // Buy tokens with addr1 to addr4
         const tokenAmount = ethers.parseEther((saleThreePrice * 10).toString());
         const ethersAmount = tokenAmount / BigInt(saleThreePrice);
-        await ico.connect(addr1).buyTokens(tokenAmount, { value: ethersAmount });
-        await ico.connect(addr2).buyTokens(tokenAmount * 2n, { value: 2n * ethersAmount });
-        await ico.connect(addr3).buyTokens(tokenAmount * 5n, { value: 5n * ethersAmount });
-        await ico.connect(addr4).buyTokens(tokenAmount * 30n, { value: 30n * ethersAmount });
+        await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: ethersAmount });
+        await ico.connect(addr2).buyTokens(tokenAmount * 2n, zeroAddress, { value: 2n * ethersAmount });
+        await ico.connect(addr3).buyTokens(tokenAmount * 5n, zeroAddress, { value: 5n * ethersAmount });
+        await ico.connect(addr4).buyTokens(tokenAmount * 30n, zeroAddress, { value: 30n * ethersAmount });
 
         return ethersAmount * 38n;
     }
@@ -307,7 +309,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) });
 
             const saleOne = await ico.saleOne();
             // Check if the tokens were bought correctly
@@ -318,7 +320,7 @@ describe("ICO Contract", function () {
             expect(await ethers.provider.getBalance(ico.target)).to.equal(contractBalanceBefore + tokenAmount / BigInt(saleOnePrice));
 
             // Check if the event was emitted correctly
-            expect(await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) }))
+            expect(await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) }))
                 .to.emit(ico, "TokenPurchased")
                 .withArgs(addr1.address, tokenAmount, tokenAmount / BigInt(saleOnePrice));
         });
@@ -334,7 +336,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleTwoPrice) });
 
             const saleTwo = await ico.saleTwo();
             // Check if the tokens were bought correctly
@@ -345,7 +347,7 @@ describe("ICO Contract", function () {
             expect(await ethers.provider.getBalance(ico.target)).to.equal(contractBalanceBefore + tokenAmount / BigInt(saleTwoPrice));
 
             // Check if the event was emitted correctly
-            expect(await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) }))
+            expect(await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleTwoPrice) }))
                 .to.emit(ico, "TokenPurchased")
                 .withArgs(addr1.address, tokenAmount, tokenAmount / BigInt(saleTwoPrice));
         });
@@ -361,7 +363,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleThreePrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleThreePrice) });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleThreePrice) });
 
             const saleThree = await ico.saleThree();
             // Check if the tokens were bought correctly
@@ -372,7 +374,7 @@ describe("ICO Contract", function () {
             expect(await ethers.provider.getBalance(ico.target)).to.equal(contractBalanceBefore + tokenAmount / BigInt(saleThreePrice));
 
             // Check if the event was emitted correctly
-            expect(await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleThreePrice) }))
+            expect(await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleThreePrice) }))
                 .to.emit(ico, "TokenPurchased")
                 .withArgs(addr1.address, tokenAmount, tokenAmount / BigInt(saleThreePrice));
         });
@@ -387,7 +389,7 @@ describe("ICO Contract", function () {
             // Buy tokens with addr1
             const tokenAmount1 = saleOneSupply;
             const etherAmount1 = tokenAmount1 / BigInt(saleOnePrice);
-            await ico.connect(addr1).buyTokens(tokenAmount1, { value: etherAmount1 });
+            await ico.connect(addr1).buyTokens(tokenAmount1, zeroAddress, { value: etherAmount1 });
 
             // Check if the tokens were bought correctly
             expect(await ico.boughtTokensSaleOne(addr1.address)).to.equal(tokenAmount1);
@@ -397,7 +399,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount2 = saleTwoSupply;
-            await ico.connect(addr1).buyTokens(tokenAmount2, { value: tokenAmount2 / BigInt(saleTwoPrice) });
+            await ico.connect(addr1).buyTokens(tokenAmount2, zeroAddress, { value: tokenAmount2 / BigInt(saleTwoPrice) });
 
             // Check if the tokens were bought correctly
             expect(await ico.boughtTokensSaleTwo(addr1.address)).to.equal(tokenAmount2);
@@ -407,7 +409,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount3 = saleThreeSupply;
-            await ico.connect(addr1).buyTokens(tokenAmount3, { value: tokenAmount3 / BigInt(saleThreePrice) });
+            await ico.connect(addr1).buyTokens(tokenAmount3, zeroAddress, { value: tokenAmount3 / BigInt(saleThreePrice) });
 
             // Check if the tokens were bought correctly
             expect(await ico.boughtTokensSaleThree(addr1.address)).to.equal(tokenAmount3);
@@ -420,11 +422,11 @@ describe("ICO Contract", function () {
             await ico.manageWhitelist([addr1.address], [true]);
 
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart - 60 * 60 * 24 * 1]);
-            await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: 10 })).to.be.revertedWith("Sale not active");
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: 10 })).to.be.revertedWith("Sale not active");
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneEnd + 60 * 60 * 24 * 1]);
-            await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: 10 })).to.be.revertedWith("Sale not active");
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: 10 })).to.be.revertedWith("Sale not active");
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + 60 * 60 * 24 * 1]);
-            await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: 10 })).to.be.revertedWith("Sale not active");
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: 10 })).to.be.revertedWith("Sale not active");
         });
 
         it("Should not buy tokens if not whitelisted", async function () {
@@ -433,7 +435,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
-            await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) }))
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) }))
                 .to.be.revertedWith("Not whitelisted");
         });
 
@@ -446,7 +448,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = saleOneSupply + BigInt(saleOnePrice);
-            await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) }))
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) }))
                 .to.be.revertedWith("Insufficient remaining tokens supply");
 
             // Set the timestamp to be within SaleTwo
@@ -454,7 +456,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount2 = saleTwoSupply + BigInt(saleOnePrice);
-            await expect(ico.connect(addr1).buyTokens(tokenAmount2, { value: tokenAmount2 / BigInt(saleTwoPrice) }))
+            await expect(ico.connect(addr1).buyTokens(tokenAmount2, zeroAddress, { value: tokenAmount2 / BigInt(saleTwoPrice) }))
                 .to.be.revertedWith("Insufficient remaining tokens supply");
 
             // Set the timestamp to be within SaleThree
@@ -462,7 +464,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount3 = saleThreeSupply + BigInt(saleOnePrice);
-            await expect(ico.connect(addr1).buyTokens(tokenAmount3, { value: tokenAmount3 / BigInt(saleThreePrice) }))
+            await expect(ico.connect(addr1).buyTokens(tokenAmount3, zeroAddress, { value: tokenAmount3 / BigInt(saleThreePrice) }))
                 .to.be.revertedWith("Insufficient remaining tokens supply");
         });
 
@@ -475,11 +477,11 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
-            await expect(ico.connect(addr1).buyTokens(tokenAmount,
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, zeroAddress,
                 { value: (tokenAmount / BigInt(saleTwoPrice)) - 1n }))
                 .to.be.revertedWith("Wrong amount of Ether sent");
 
-            await expect(ico.connect(addr1).buyTokens(tokenAmount,
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, zeroAddress,
                 { value: (tokenAmount / BigInt(saleTwoPrice)) + 1n }))
                 .to.be.revertedWith("Wrong amount of Ether sent");
         });
@@ -493,7 +495,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = saleOneMinPurchase / 10n;
-            await expect(ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleOnePrice) }))
+            await expect(ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) }))
                 .to.be.revertedWith("Amount less than minimum purchase");
 
             // Set the timestamp to be within SaleTwo
@@ -501,7 +503,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount2 = saleTwoMinPurchase / 10n;
-            await expect(ico.connect(addr1).buyTokens(tokenAmount2, { value: tokenAmount2 / BigInt(saleTwoPrice) }))
+            await expect(ico.connect(addr1).buyTokens(tokenAmount2, zeroAddress, { value: tokenAmount2 / BigInt(saleTwoPrice) }))
                 .to.be.revertedWith("Amount less than minimum purchase");
 
             // Set the timestamp to be within SaleThree
@@ -509,8 +511,65 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount3 = saleThreeMinPurchase / 10n;
-            await expect(ico.connect(addr1).buyTokens(tokenAmount3, { value: tokenAmount3 / BigInt(saleThreePrice) }))
+            await expect(ico.connect(addr1).buyTokens(tokenAmount3, zeroAddress, { value: tokenAmount3 / BigInt(saleThreePrice) }))
                 .to.be.revertedWith("Amount less than minimum purchase");
+        });
+
+        it("Should give referral tokens if the referral address is not zero", async function () {
+            // Set the timestamp to be within SaleOne
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart]);
+
+            // Add addr1 and addr2 to the whitelist
+            await ico.manageWhitelist([addr1.address, addr2.address], [true, true]);
+
+            // Buy tokens with addr1 (the referral)
+            const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) });
+
+            // Check that no referral tokens were given
+            expect(await ico.totalReferralTokens()).to.equal(0);
+            expect(await ico.referralTokens(addr1.address)).to.equal(0);
+
+            // Buy tokens with addr2 (the referred)
+            const tokenAmount2 = ethers.parseEther((saleOnePrice * 10).toString());
+            await ico.connect(addr2).buyTokens(tokenAmount2, addr1.address, { value: tokenAmount2 / BigInt(saleOnePrice) });
+
+            // Check that the referral tokens were given
+            expect(await ico.totalReferralTokens()).to.equal(2n * (tokenAmount2 / 625n));
+            expect(await ico.referralTokens(addr1.address)).to.equal(tokenAmount2 / 625n);
+            expect(await ico.referralTokens(addr2.address)).to.equal(tokenAmount2 / 625n);
+        });
+
+        it("Should not give referral tokens if the referral address did not buy tokens", async function () {
+            // Set the timestamp to be within SaleOne
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart]);
+
+            // Add addr1 and addr2 to the whitelist
+            await ico.manageWhitelist([addr1.address, addr2.address], [true, true]);
+
+            // Buy tokens with addr2 (the referred)
+            const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
+            expect(ico.connect(addr2).buyTokens(tokenAmount, addr1.address, { value: tokenAmount / BigInt(saleOnePrice) })).to.be.revertedWith("Referral has not bought tokens");
+        });
+
+        it("Should not give referral tokens if the referral address is not whitelisted", async function () {
+            // Set the timestamp to be within SaleOne
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneStart]);
+
+            // Add addr1 to the whitelist
+            await ico.manageWhitelist([addr1.address], [true]);
+
+            // Buy tokens with addr1 (the referral)
+            const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) });
+
+            // Check that no referral tokens were given
+            expect(await ico.totalReferralTokens()).to.equal(0);
+            expect(await ico.referralTokens(addr1.address)).to.equal(0);
+
+            // Buy tokens with addr2 (the referred)
+            const tokenAmount2 = ethers.parseEther((saleOnePrice * 10).toString());
+            expect(ico.connect(addr2).buyTokens(tokenAmount2, addr1.address, { value: tokenAmount2 / BigInt(saleOnePrice) })).to.be.revertedWith("Referral not whitelisted");
         });
     });
 
@@ -702,7 +761,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmountSaleOne = ethers.parseEther((saleOnePrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmountSaleOne, { value: tokenAmountSaleOne / BigInt(saleOnePrice) });
+            await ico.connect(addr1).buyTokens(tokenAmountSaleOne, zeroAddress, { value: tokenAmountSaleOne / BigInt(saleOnePrice) });
 
             // Set the timestamp to be within SaleTwo
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart + 60 * 60 * 24 * 1]);
@@ -710,7 +769,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmountSaleTwo = ethers.parseEther((saleTwoPrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmountSaleTwo, { value: tokenAmountSaleTwo / BigInt(saleTwoPrice) });
+            await ico.connect(addr1).buyTokens(tokenAmountSaleTwo, zeroAddress, { value: tokenAmountSaleTwo / BigInt(saleTwoPrice) });
 
             // Set the timestamp to be within SaleThree
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeStart + 60 * 60 * 24 * 1]);
@@ -720,7 +779,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmountSaleThree = ethers.parseEther((saleThreePrice * 500).toString());
-            await ico.connect(addr1).buyTokens(tokenAmountSaleThree, { value: tokenAmountSaleThree / BigInt(saleThreePrice) });
+            await ico.connect(addr1).buyTokens(tokenAmountSaleThree, zeroAddress, { value: tokenAmountSaleThree / BigInt(saleThreePrice) });
 
             // Set the timestamp to be after the sale has ended
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + 60 * 60 * 24 * 1]);
@@ -751,7 +810,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleTwoPrice) });
 
             // Set the timestamp to be after the vesting period
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + cliffPeriod + vestingPeriod]);
@@ -779,7 +838,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleTwoPrice) });
 
             // Set the timestamp to be within the cliff period
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + cliffPeriod / 2]);
@@ -797,7 +856,7 @@ describe("ICO Contract", function () {
 
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: tokenAmount / BigInt(saleTwoPrice) });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleTwoPrice) });
 
             // Set the timestamp to be after the cliff period and within the vesting period so all tokens are unlocked
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + cliffPeriod + vestingPeriod + 1]);
@@ -808,6 +867,37 @@ describe("ICO Contract", function () {
 
             // Claim tokens with addr1 again
             await expect(ico.connect(addr1).claimTokens()).to.be.revertedWith("No claimable tokens");
+        });
+
+        it("Should add referral tokens to the total claimed tokens", async function () {
+            // Set the timestamp to be within SaleTwo
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoStart + 60 * 60 * 24 * 1]);
+
+            // Add addr1 and addr2 to the whitelist
+            await ico.manageWhitelist([addr1.address, addr2.address], [true, true]);
+
+            // Buy tokens with addr1 (the referral)
+            const tokenAmount = ethers.parseEther((saleTwoPrice * 10).toString());
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleTwoPrice) });
+
+            // Buy tokens with addr2 (the referred)
+            const tokenAmount2 = ethers.parseEther((saleTwoPrice * 10).toString());
+            await ico.connect(addr2).buyTokens(tokenAmount2, addr1.address, { value: tokenAmount2 / BigInt(saleTwoPrice) });
+
+            // Set the timestamp to be after the cliff period and within the vesting period
+            await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + cliffPeriod + vestingPeriod + 1]);
+
+            await ico.endSale(2);
+            // Claim tokens with addr2
+            await ico.connect(addr2).claimTokens();
+
+            const referralTokens = tokenAmount2 / 625n;
+            const claimedTokens = await ico.claimedTokens(addr2.address);
+
+            // Check if the tokens were claimed correctly
+            expect(claimedTokens).to.equal(tokenAmount2 + referralTokens);
+            expect(await ico.referralTokens(addr2.address)).to.equal(0);
+            expect(await ico.referralTokens(addr1.address)).to.equal(referralTokens);
         });
     });
 
@@ -823,7 +913,7 @@ describe("ICO Contract", function () {
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleOnePrice * 1).toString());
             const paidEthers = tokenAmount / BigInt(saleOnePrice);
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: paidEthers });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: paidEthers });
 
             // Set the timestamp to be after SaleOne
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleOneEnd + 60 * 60 * 24 * 1]);
@@ -844,7 +934,7 @@ describe("ICO Contract", function () {
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleTwoPrice * 1).toString());
             const paidEthers = tokenAmount / BigInt(saleTwoPrice);
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: paidEthers });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: paidEthers });
 
             // Set the timestamp to be after SaleTwo
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleTwoEnd + 60 * 60 * 24 * 1]);
@@ -865,7 +955,7 @@ describe("ICO Contract", function () {
             // Buy tokens with addr1
             const tokenAmount = ethers.parseEther((saleThreePrice * 1).toString());
             const paidEthers = tokenAmount / BigInt(saleThreePrice);
-            await ico.connect(addr1).buyTokens(tokenAmount, { value: paidEthers });
+            await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: paidEthers });
 
             // Set the timestamp to be after SaleThree
             await ethers.provider.send("evm_setNextBlockTimestamp", [saleThreeEnd + 60 * 60 * 24 * 1]);
