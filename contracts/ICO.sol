@@ -102,7 +102,9 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     mapping(address => uint256) public boughtTokensSaleTwo;
     mapping(address => uint256) public boughtTokensSaleThree;
 
+    // Referral system
     mapping(address => uint256) public referralTokens;
+    uint256 public referralRate; // The rate is the denominator of the fraction, e.g. 2 means 1/2 = 0.5 = 50%
     uint256 public totalReferralTokens;
 
     mapping(address => uint256) public claimedTokens;
@@ -121,7 +123,8 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         Sale memory _saleTwo,
         Sale memory _saleThree,
         uint256 _cliffPeriod,
-        uint256 _vestingPeriod
+        uint256 _vestingPeriod,
+        uint256 _referralRate
     ) Ownable(msg.sender) {
         token = BearsRumble(_token);
 
@@ -157,6 +160,8 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
         cliffPeriod = _cliffPeriod;
         vestingPeriod = _vestingPeriod;
+
+        referralRate = _referralRate;
 
         whitelist[msg.sender] = true;
     }
@@ -230,7 +235,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         }
 
         // Referral system
-        // 0,32% of the bought tokens will be distributed to the referral address and the buyer
+        // X% of the bought tokens will be distributed to the referral address and the buyer
         // Requires the referral address to be whitelisted and to have bought tokens in any sale
         if (_referralAddress != address(0) && _referralAddress != msg.sender) {
             require(whitelist[_referralAddress], "Referral not whitelisted");
@@ -241,14 +246,14 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 boughtTokensSaleThree[_referralAddress];
             require(referralBoughtTokens > 0, "Referral has not bought tokens");
 
-            uint256 referralAmount = _amount / 625; // 0,16% of the bought tokens
+            uint256 referralAmount = _amount / referralRate;
             referralTokens[_referralAddress] += referralAmount;
             referralTokens[msg.sender] += referralAmount;
             totalReferralTokens += 2 * referralAmount;
 
             emit TokenPurchased(_referralAddress, referralAmount, price);
         } else {
-            uint256 referralAmount = _amount / 625; // 0,16% of the bought tokens
+            uint256 referralAmount = _amount / referralRate; 
             referralTokens[owner()] += 2 * referralAmount;
         }
 
@@ -442,6 +447,15 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      */
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /**
+     * @dev Updates the referral rate.
+     * Only the contract owner can call this function.
+     * @param _newRate New referral rate. The rate is the denominator of the fraction, e.g. 2 means 1/2 = 0.5 = 50%.
+     */
+    function updateReferralRate(uint256 _newRate) external onlyOwner {
+        referralRate = _newRate;
     }
 
     /************************************ Internal functions ************************************/

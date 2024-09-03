@@ -35,6 +35,8 @@ describe("ICO Contract", function () {
     const saleThree = [saleThreePrice, saleThreeSupply, 0, saleThreeMinPurchase, saleThreeStart, saleThreeEnd, saleThreeMinTokensSold, false, false];
     const referralSupply = (saleOneSupply + saleTwoSupply + saleThreeSupply) * 2n / 100n;
 
+    const referralRate = 40n; // 2,5% of the total supply (100%/40)
+
     beforeEach(async function () {
         // Reset the hardhat network
         await ethers.provider.send("hardhat_reset", []);
@@ -51,7 +53,8 @@ describe("ICO Contract", function () {
             saleTwo,
             saleThree,
             cliffPeriod,
-            vestingPeriod
+            vestingPeriod,
+            referralRate
         );
         await ico.waitForDeployment();
         // Get signers
@@ -535,9 +538,9 @@ describe("ICO Contract", function () {
             await ico.connect(addr2).buyTokens(tokenAmount2, addr1.address, { value: tokenAmount2 / BigInt(saleOnePrice) });
 
             // Check that the referral tokens were given
-            expect(await ico.totalReferralTokens()).to.equal(2n * (tokenAmount2 / 625n));
-            expect(await ico.referralTokens(addr1.address)).to.equal(tokenAmount2 / 625n);
-            expect(await ico.referralTokens(addr2.address)).to.equal(tokenAmount2 / 625n);
+            expect(await ico.totalReferralTokens()).to.equal(2n * (tokenAmount2 / referralRate));
+            expect(await ico.referralTokens(addr1.address)).to.equal(tokenAmount2 / referralRate);
+            expect(await ico.referralTokens(addr2.address)).to.equal(tokenAmount2 / referralRate);
         });
 
         it("Should not give referral tokens if the referral address did not buy tokens", async function () {
@@ -891,7 +894,7 @@ describe("ICO Contract", function () {
             // Claim tokens with addr2
             await ico.connect(addr2).claimTokens();
 
-            const referralTokens = tokenAmount2 / 625n;
+            const referralTokens = tokenAmount2 / referralRate;
             const claimedTokens = await ico.claimedTokens(addr2.address);
 
             // Check if the tokens were claimed correctly
@@ -1045,6 +1048,19 @@ describe("ICO Contract", function () {
 
             // Unpause the contract
             await expect(ico.connect(addr1).unpause())
+                .to.be.revertedWithCustomError(ico, "OwnableUnauthorizedAccount");
+        });
+    });
+
+    describe("Update refferal rate", function () {
+        it("Should update refferal rate", async function () {
+            const newReferralRate = 5;
+            await ico.updateReferralRate(newReferralRate);
+            expect(await ico.referralRate()).to.equal(newReferralRate);
+        });
+
+        it("Should not update refferal rate if not the owner", async function () {
+            await expect(ico.connect(addr1).updateReferralRate(5))
                 .to.be.revertedWithCustomError(ico, "OwnableUnauthorizedAccount");
         });
     });
