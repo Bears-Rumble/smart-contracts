@@ -320,6 +320,13 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         require(result, "Transfer failed");
     }
 
+
+    /**
+     * @dev Allows users to claim a refund if the sale ends and the minimum tokens are not sold.
+     * @param _saleToRefund The sale to refund, 1 for sale one, 2 for sale two, 3 for sale three.
+     * @notice The refund amount is calculated based on the bought tokens and the token price.
+     * @notice The bought tokens are reset to 0 and the refund amount is transferred to the user's address.
+     */
     function claimRefund(
         uint256 _saleToRefund
     )
