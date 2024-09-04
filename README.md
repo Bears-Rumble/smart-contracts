@@ -41,3 +41,14 @@ To install and use the Bears Rumble project, follow these steps:
     ```bash
     npx hardhat run scripts/deploy.js --network localhost
     ```
+
+
+## ICO Contract
+
+To correctly use the ICO contract, follow these steps:
+- Deploy the Smart Contract with the wanted parameters. See the test file for example.
+- Send the required amount of ERC20 tokens for each sale and for the referral system. You can send these tokens anytime between the contract deployement and the end of the cliff period. After, the contract has to have the necessary amount of tokens for the buyers to claim.
+- Whitelist the desired buyers' addresses with the '''manageWhitelist''' function
+- After each sale phase, end it to retrieve the funds with the '''endSale''' function
+- After the end of the cliff period, buyers will be able to claim their tokens with the '''claimTokens''' function
+- If a sale failed by not meeting the minimum amount set in the deployement, buyers can get a refund with the '''claimRefund''' function
