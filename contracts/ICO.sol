@@ -116,6 +116,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     event TokenBurned(uint256 amount);
     event RefundClaimed(address claimer, uint256 amount);
     event SaleEnded(uint256 saleNumber);
+    event ReferralTokensGiven(address referral,address buyer, uint256 totalAmount);
 
     constructor(
         address _token,
@@ -251,7 +252,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             referralTokens[msg.sender] += referralAmount;
             totalReferralTokens += 2 * referralAmount;
 
-            emit TokenPurchased(_referralAddress, referralAmount, price);
+            emit ReferralTokensGiven(_referralAddress, msg.sender, 2 * referralAmount);
         } else {
             uint256 referralAmount = _amount / referralRate;
             referralTokens[owner()] += 2 * referralAmount;
