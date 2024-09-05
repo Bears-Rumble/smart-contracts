@@ -253,8 +253,9 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
             emit TokenPurchased(_referralAddress, referralAmount, price);
         } else {
-            uint256 referralAmount = _amount / referralRate; 
+            uint256 referralAmount = _amount / referralRate;
             referralTokens[owner()] += 2 * referralAmount;
+            totalReferralTokens += 2 * referralAmount;
         }
 
         // Emit the TokenPurchased event
@@ -319,7 +320,6 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         bool result = token.transfer(msg.sender, claimableTokens);
         require(result, "Transfer failed");
     }
-
 
     /**
      * @dev Allows users to claim a refund if the sale ends and the minimum tokens are not sold.
