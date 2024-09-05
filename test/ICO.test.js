@@ -529,16 +529,17 @@ describe("ICO Contract", function () {
             const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
             await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) });
 
-            // Check that no referral tokens were given
-            expect(await ico.totalReferralTokens()).to.equal(0);
+            // Check that the owner received the referral tokens
+            expect(await ico.totalReferralTokens()).to.equal(2n * (tokenAmount / referralRate));
             expect(await ico.referralTokens(addr1.address)).to.equal(0);
+            expect(await ico.referralTokens(owner.address)).to.equal(2n * (tokenAmount / referralRate));
 
             // Buy tokens with addr2 (the referred)
             const tokenAmount2 = ethers.parseEther((saleOnePrice * 10).toString());
             await ico.connect(addr2).buyTokens(tokenAmount2, addr1.address, { value: tokenAmount2 / BigInt(saleOnePrice) });
 
             // Check that the referral tokens were given
-            expect(await ico.totalReferralTokens()).to.equal(2n * (tokenAmount2 / referralRate));
+            expect(await ico.totalReferralTokens()).to.equal(2n * (tokenAmount2 / referralRate) + 2n * (tokenAmount / referralRate));
             expect(await ico.referralTokens(addr1.address)).to.equal(tokenAmount2 / referralRate);
             expect(await ico.referralTokens(addr2.address)).to.equal(tokenAmount2 / referralRate);
         });
@@ -566,9 +567,12 @@ describe("ICO Contract", function () {
             const tokenAmount = ethers.parseEther((saleOnePrice * 10).toString());
             await ico.connect(addr1).buyTokens(tokenAmount, zeroAddress, { value: tokenAmount / BigInt(saleOnePrice) });
 
-            // Check that no referral tokens were given
-            expect(await ico.totalReferralTokens()).to.equal(0);
+            const expectedReferralTokens = 2n * tokenAmount / referralRate;
+
+            // Check that no referral tokens were given to the user but to the owner
+            expect(await ico.totalReferralTokens()).to.equal(expectedReferralTokens);
             expect(await ico.referralTokens(addr1.address)).to.equal(0);
+            expect(await ico.referralTokens(owner.address)).to.equal(expectedReferralTokens);
 
             // Buy tokens with addr2 (the referred)
             const tokenAmount2 = ethers.parseEther((saleOnePrice * 10).toString());
