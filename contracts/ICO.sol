@@ -286,7 +286,6 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         //Add referral tokens to the bought tokens if it was not done yet
         if (referralTokens[msg.sender] > 0) {
             boughtTokens += referralTokens[msg.sender];
-            referralTokens[msg.sender] = 0;
         }
 
         // Calculate the total bought tokens for the user. Sale must be ended and refund not active
