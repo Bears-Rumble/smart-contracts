@@ -462,6 +462,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      * @param _newRate New referral rate. The rate is the denominator of the fraction, e.g. 2 means 1/2 = 0.5 = 50%.
      */
     function updateReferralRate(uint256 _newRate) external onlyOwner {
+        require(_newRate > 0, "Invalid rate");
         referralRate = _newRate;
     }
 
