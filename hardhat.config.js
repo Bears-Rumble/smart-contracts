@@ -13,7 +13,11 @@ module.exports = {
     ethereum: {
       url: process.env.ETHEREUM_RPC_URL,
       accounts: [process.env.ETHEREUM_PRIVATE_KEY]
-    }
+    },
+    bnbTestnet : {
+      url: process.env.BNB_TESTNET_RPC_URL,
+      accounts: [process.env.BNB_TESTNET_PRIVATE_KEY]
+    },
   },
   solidity: {
     version: "0.8.26",
