@@ -5,7 +5,13 @@ task("checkWhitelist", "Checks if an address is whitelisted")
   .addParam("address", "The address to be checked")
   .setAction(async (taskArgs) => {
     const address = taskArgs.address;
-    const contractAddress = "0x9C65942E9cF7f5f17A3b486E32E24Ea6D8A40FeA";
+    
+    let contractAddress;
+    if (hre.network.name === "ethereum") {
+      contractAddress = process.env.ETHEREUM_ICO_CONTRACT_ADDRESS;
+    } else if (hre.network.name === "bnbTestnet") {
+      contractAddress = process.env.BNB_TESTNET_ICO_CONTRACT_ADDRESS;
+    }
 
     // Get the contract with the factory
     const ICOContract = await hre.ethers.getContractFactory("ICO");
@@ -21,7 +27,15 @@ task("manageWhitelist", "Whitelists an address")
   .setAction(async (taskArgs) => {
     const addresses = taskArgs.addresses;
     const isWhitelisted = taskArgs.isWhitelisted;
-    const contractAddress = "0x9C65942E9cF7f5f17A3b486E32E24Ea6D8A40FeA";
+    console.log("Whitelisting addresses: ", addresses);
+    console.log("Is whitelisted: ", isWhitelisted);
+    
+    let contractAddress;
+    if (hre.network.name === "ethereum") {
+      contractAddress = process.env.ETHEREUM_ICO_CONTRACT_ADDRESS;
+    } else if (hre.network.name === "bnbTestnet") {
+      contractAddress = process.env.BNB_TESTNET_ICO_CONTRACT_ADDRESS;
+    }
 
     // Get the contract with the factory
     const ICOContract = await hre.ethers.getContractFactory("ICO");
