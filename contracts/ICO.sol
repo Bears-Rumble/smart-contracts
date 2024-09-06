@@ -104,7 +104,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
     // Referral system
     mapping(address => uint256) public referralTokens;
-    uint256 public referralRate; // The rate is the denominator of the fraction, e.g. 2 means 1/2 = 0.5 = 50%
+    uint256 public referralRate; // The rate is the denominator of the fraction, e.g. 50 means 1/50 = 0.02 = 50%. Referral is given to both the referral and the buyer
     uint256 public totalReferralTokens;
 
     mapping(address => uint256) public claimedTokens;
