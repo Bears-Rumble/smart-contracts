@@ -89,6 +89,9 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     // Whitelist, true if the address is whitelisted. Only whitelisted addresses can buy tokens
     mapping(address => bool) public whitelist;
 
+    // Whitelist manager, can manage the whitelist to avoid using the owner address for security reasons
+    address public whitelistManager;
+
     // Vesting
     // Cliff period in seconds
     uint256 public immutable cliffPeriod;
@@ -116,7 +119,11 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     event TokenBurned(uint256 amount);
     event RefundClaimed(address claimer, uint256 amount);
     event SaleEnded(uint256 saleNumber);
-    event ReferralTokensGiven(address referral,address buyer, uint256 totalAmount);
+    event ReferralTokensGiven(
+        address referral,
+        address buyer,
+        uint256 totalAmount
+    );
 
     constructor(
         address _token,
@@ -252,7 +259,11 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
             referralTokens[msg.sender] += referralAmount;
             totalReferralTokens += 2 * referralAmount;
 
-            emit ReferralTokensGiven(_referralAddress, msg.sender, 2 * referralAmount);
+            emit ReferralTokensGiven(
+                _referralAddress,
+                msg.sender,
+                2 * referralAmount
+            );
         } else {
             uint256 referralAmount = _amount / referralRate;
             referralTokens[owner()] += 2 * referralAmount;
@@ -373,7 +384,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     function manageWhitelist(
         address[] calldata _addresses,
         bool[] calldata _isWhitelisted
-    ) external onlyOwner {
+    ) external onlyWhitelistManagers {
         require(
             _addresses.length == _isWhitelisted.length,
             "Arrays length mismatch"
@@ -381,6 +392,16 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
         for (uint256 i = 0; i < _addresses.length; i++) {
             whitelist[_addresses[i]] = _isWhitelisted[i];
         }
+    }
+
+    /**
+     * @dev Sets the whitelist manager address.
+     * Only the contract owner can call this function.
+     * @param _whitelistManager Address of the whitelist manager.
+     * zero address can be set to remove the whitelist manager.
+     */
+    function setWhitelistManager(address _whitelistManager) external onlyOwner {
+        whitelistManager = _whitelistManager;
     }
 
     /**
@@ -542,6 +563,14 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
     modifier onlyWhiteListed() {
         require(whitelist[msg.sender], "Not whitelisted");
+        _;
+    }
+
+    modifier onlyWhitelistManagers() {
+        require(
+            msg.sender == whitelistManager || msg.sender == owner(),
+            "Not whitelist manager"
+        );
         _;
     }
 
