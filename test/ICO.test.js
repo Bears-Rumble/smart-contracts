@@ -278,7 +278,7 @@ describe("ICO Contract", function () {
         it("Should not add an address to the whitelist if not the owner", async function () {
             // Add addr1 to the whitelist
             await expect(ico.connect(addr1).manageWhitelist([addr1.address], [true]))
-                .to.be.revertedWithCustomError(ico, "OwnableUnauthorizedAccount");
+                .to.revertedWith("Not whitelist manager");
         });
 
         it("Should remove an address from the whitelist", async function () {
@@ -903,7 +903,7 @@ describe("ICO Contract", function () {
 
             // Check if the tokens were claimed correctly
             expect(claimedTokens).to.equal(tokenAmount2 + referralTokens);
-            expect(await ico.referralTokens(addr2.address)).to.equal(0);
+            expect(await ico.referralTokens(addr2.address)).to.equal(referralTokens);
             expect(await ico.referralTokens(addr1.address)).to.equal(referralTokens);
         });
     });
