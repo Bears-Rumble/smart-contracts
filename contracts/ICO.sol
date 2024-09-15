@@ -14,7 +14,7 @@ import {BearsRumble} from "./BearRumble.sol";
  * @author Bears Rumble: https://bearsrumble.com/
  * @notice This contract is used to manage the ICO of the BearsRumble token
  *         The ICO has three sales, a cliff period and a vesting period
- *         The owner can manage the whitelist, end the sale and burn the unsold tokens
+ *         The owner can manage the whitelist, end the sale and get back the unsold tokens
  *         The buyers can buy tokens and claim them after the vesting period
  *         If a sale ends and the minimum tokens are not sold, the buyers can claim a refund
  *
@@ -116,7 +116,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     event TokenPurchased(address buyer, uint256 amount, uint256 price);
     event TokenClaimed(address claimer, uint256 amount);
     event SaleStageChanged(SaleStages newStage);
-    event TokenBurned(uint256 amount);
+    event TokenRecovered(uint256 amount);
     event RefundClaimed(address claimer, uint256 amount);
     event SaleEnded(uint256 saleNumber);
     event ReferralTokensGiven(
@@ -409,7 +409,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
      * Only the contract owner can call this function.
      * Ending a sale either activates the refund mechanism or transfers the received Ether to the owner,
      * depending on whether the minimum tokens sold amount is reached or not.
-     * The unsold tokens are then burned.
+     * The unsold tokens are then sent back to the owner.
      */
     function endSale(
         uint256 _saleToEnd
@@ -421,7 +421,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
 
             if (saleOne.soldTokens < saleOne.minSoldTokens) {
                 saleOne.isRefundActive = true; // Activate refund, allowing users to claim their Ether back
-                saleOne.soldTokens = 0; // Reset sold tokens to 0 as all tokens will be refunded, every token will be burned
+                saleOne.soldTokens = 0; // Reset sold tokens to 0 as all tokens will be refunded, every token will be sent back to the owner
             } else {
                 uint256 saleOneReceivedETH = saleOne.soldTokens / saleOne.price; // Calculate the amount of Ether received from the sale
 
@@ -456,7 +456,7 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
                 payable(owner()).transfer(saleThreeReceivedETH);
             }
         }
-        burnUnsoldTokens(_saleToEnd);
+        recoverUnsoldTokens(_saleToEnd);
 
         emit SaleEnded(_saleToEnd);
     }
@@ -490,25 +490,25 @@ contract ICO is Ownable, ReentrancyGuard, Pausable {
     /************************************ Internal functions ************************************/
 
     /**
-     * @dev Burns unsold tokens after the ICO ends.
-     * If there are unsold tokens, they are burned by calling the `burn` function of the token contract.
-     * Emits a `TokenBurned` event with the number of tokens burned.
+     * @dev Recover unsold tokens after the ICO ends.
+     * If there are unsold tokens, they are sent back to the owner.
+     * Emits a `TokenRecovered` event with the number of tokens sent back to the owner.
      */
-    function burnUnsoldTokens(uint256 _saleToBurn) internal {
+    function recoverUnsoldTokens(uint256 _saleToRecoverTokens) internal {
         // Calculate the number of unsold tokens
         uint256 unsoldTokens = 0;
-        if (_saleToBurn == 1) {
+        if (_saleToRecoverTokens == 1) {
             unsoldTokens = saleOne.tokenSupply - saleOne.soldTokens;
-        } else if (_saleToBurn == 2) {
+        } else if (_saleToRecoverTokens == 2) {
             unsoldTokens = saleTwo.tokenSupply - saleTwo.soldTokens;
-        } else if (_saleToBurn == 3) {
+        } else if (_saleToRecoverTokens == 3) {
             unsoldTokens = saleThree.tokenSupply - saleThree.soldTokens;
         }
 
-        // Burn the unsold tokens if there are any
+        // Transfer back to the owner the unsold tokens if there are any
         if (unsoldTokens != 0) {
-            emit TokenBurned(unsoldTokens);
-            token.burn(unsoldTokens);
+            emit TokenRecovered(unsoldTokens);
+            token.transfer(owner(), unsoldTokens);
         }
     }
 
