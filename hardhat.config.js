@@ -22,11 +22,7 @@ task("checkWhitelist", "Checks if an address is whitelisted")
   });
 
 task("manageWhitelist", "Whitelists an address")
-  .addParam("addresses", "The address to be whitelisted")
-  .addParam("isWhitelisted", "Whether the address is whitelisted")
   .setAction(async (taskArgs) => {
-    let addresses = taskArgs.addresses;
-    let isWhitelisted = taskArgs.isWhitelisted;
     
     let contractAddress;
     if (hre.network.name === "ethereum") {
@@ -40,7 +36,9 @@ task("manageWhitelist", "Whitelists an address")
     const icoContract = ICOContract.attach(contractAddress);
     console.log(`Managing whitelist for contract at address ${contractAddress}`);
     // Whitelist addresses
-    const trx = await icoContract.manageWhitelist(["0x21C2b58eB7Fe8497fdb2864c50eA095621295738"], [true]);
+    const addresses = [];
+    const bools = [true];
+    const trx = await icoContract.manageWhitelist(addresses, bools);
     
     // Log the result
     console.log(trx);
@@ -87,12 +85,13 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.8.26",
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
+        runs: 200,
+      },
+      evmVersion: "shanghai"
     }
   }
 };
