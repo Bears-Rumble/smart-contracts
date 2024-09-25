@@ -5,23 +5,23 @@ async function main() {
   // Set deployment parameters (DUMMY VALUES, REPLACE WITH REAL VALUES)
   const saleOnePrice = 130_000; // Price in Tokens per Ether
   const saleOneSupply = 40_000_000n * 10n ** 18n;
-  const saleOneMinPurchase = 0; //20_000n * 10n ** 18n; // About 500 USD  
+  const saleOneMinPurchase = 130_000 * 10; //20_000n * 10n ** 18n; // About 500 USD  
   const saleOneStart = Math.round(Date.now() / 1000); // Now
-  const saleOneEnd = saleOneStart + 60 * 60 * 24 * 5; // 4 days
+  const saleOneEnd = saleOneStart + 60 * 60 * 24 * 2; // 4 days
   const saleOneMinTokensSold = 0; //140_000n * 10n ** 18n;
 
   const saleTwoPrice = 60_000; // Price in Tokens per Ether
   const saleTwoSupply = 50_000_000n * 10n ** 18n;
-  const saleTwoMinPurchase = 0; //15_000n * 10n ** 18n; // About 200 USD
+  const saleTwoMinPurchase = 60_000 * 10; //15_000n * 10n ** 18n; // About 200 USD
   const saleTwoStart = saleOneEnd + 60 * 60 * 24 ; // 1 days after SaleOne ends
-  const saleTwoEnd = saleTwoStart + 60 * 60 * 24 * 5; // 3 days
+  const saleTwoEnd = saleTwoStart + 60 * 60 * 24 * 2; // 3 days
   const saleTwoMinTokensSold = 70_000n * 10n ** 18n;
 
   const saleThreePrice = 30_000; // Price in Tokens per Ether
   const saleThreeSupply = 60_000_000n * 10n ** 18n;
-  const saleThreeMinPurchase = 0;//10_000n * 10n ** 18n;
+  const saleThreeMinPurchase = 30_000 * 10;//10_000n * 10n ** 18n;
   const saleThreeStart = saleTwoEnd + 60 * 60 * 24 * 1; // 24 hours after SaleTwo ends
-  const saleThreeEnd = saleThreeStart + 60 * 60 * 24 * 5; // 3 day
+  const saleThreeEnd = saleThreeStart + 60 * 60 * 24 * 2; // 3 day
   const saleThreeMinTokensSold = 10_000_000n * 10n ** 18n;
 
   const cliffPeriod = 60 * 60 * 24 * 1; // 1 days
