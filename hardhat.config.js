@@ -36,12 +36,10 @@ task("manageWhitelist", "Whitelists an address")
     const icoContract = ICOContract.attach(contractAddress);
     console.log(`Managing whitelist for contract at address ${contractAddress}`);
     // Whitelist addresses
-    const addresses = [];
-    const bools = [true];
-    const trx = await icoContract.manageWhitelist(addresses, bools);
+    const addresses = ["0x6448ED8F9f7bF9Ac954a955B8891B9d816C567a6", "0x21C2b58eB7Fe8497fdb2864c50eA095621295738"];
+    const bools = [true, true];
     
-    // Log the result
-    console.log(trx);
+    await icoContract.manageWhitelist(addresses, bools);
 
     console.log(`Done!`);
   });
